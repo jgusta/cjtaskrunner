@@ -1,0 +1,21 @@
+env:
+  NODE_ENV: production
+  SSR_PORT?: 3000
+  SSR_HOST?: 127.0.0.1
+
+envcheck:
+  printf 'NODE_ENV=%s\nSSR_HOST=%s\nSSR_PORT=%s\nSSR_GREETING=%s\n' "$NODE_ENV" "$SSR_HOST" "$SSR_PORT" "$SSR_GREETING"
+
+base:
+  test -f package.json
+  test -f src/server.js
+
+start:
+  node src/server.js
+
+build:
+  mkdir -p dist
+  node src/render.js > dist/index.html
+
+clean:
+  rm -rf dist

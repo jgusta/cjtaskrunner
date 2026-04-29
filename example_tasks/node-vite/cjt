@@ -1,0 +1,21 @@
+env:
+  NODE_ENV: development
+  PORT?: 5173
+  VITE_MODE?: local
+
+envcheck:
+  printf 'NODE_ENV=%s\nPORT=%s\nVITE_API_BASE=%s\nVITE_MODE=%s\n' "$NODE_ENV" "$PORT" "$VITE_API_BASE" "$VITE_MODE"
+
+base:
+  printf '%s\n' "$PWD"
+  test -f package.json
+  test -f src/main.js
+
+dev:
+  npm run dev -- --host 127.0.0.1 --port "$PORT"
+
+build:
+  npm run build
+
+preview:
+  npm run preview -- --host 127.0.0.1 --port "$PORT"

@@ -1,0 +1,80 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100/
+.Trashes/
+.fseventsd/
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Editors and local tooling
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Rust build artifacts
+/target/
+example_tasks/rust-cli/target/
+
+# Node example artifacts
+example_tasks/node-vite/node_modules/
+example_tasks/node-vite/dist/
+example_tasks/node-vite/.vite/
+example_tasks/node-vite/.vite-temp/
+example_tasks/node-vite/npm-debug.log*
+example_tasks/node-vite/yarn-debug.log*
+example_tasks/node-vite/yarn-error.log*
+example_tasks/node-vite/pnpm-debug.log*
+example_tasks/node-ssr/node_modules/
+example_tasks/node-ssr/dist/
+example_tasks/node-ssr/npm-debug.log*
+example_tasks/node-ssr/yarn-debug.log*
+example_tasks/node-ssr/yarn-error.log*
+example_tasks/node-ssr/pnpm-debug.log*
+
+# Python example artifacts
+example_tasks/python-venv/.venv/
+example_tasks/python-venv/build/
+example_tasks/python-venv/dist/
+example_tasks/python-venv/*.egg-info/
+example_tasks/python-venv/.pytest_cache/
+example_tasks/python-venv/.mypy_cache/
+example_tasks/python-pipenv/.venv/
+example_tasks/python-pipenv/.pytest_cache/
+example_tasks/python-pipenv/.mypy_cache/
+example_tasks/python-cli-venv/.venv/
+example_tasks/python-cli-venv/build/
+example_tasks/python-cli-venv/dist/
+example_tasks/python-cli-venv/*.egg-info/
+example_tasks/python-cli-venv/.pytest_cache/
+example_tasks/python-cli-venv/.mypy_cache/
+example_tasks/pyside6-app/.venv/
+example_tasks/pyside6-app/build/
+example_tasks/pyside6-app/dist/
+example_tasks/pyside6-app/*.egg-info/
+example_tasks/pyside6-app/.pytest_cache/
+example_tasks/pyside6-app/.mypy_cache/
+example_tasks/**/__pycache__/
+example_tasks/**/*.py[cod]
+
+# Docker example artifacts
+example_tasks/docker-basic/.docker/
+example_tasks/docker-basic/compose.override.yaml
+example_tasks/docker-basic/docker-compose.override.yml
+example_tasks/docker-basic/*.tar
+example_tasks/docker-basic/*.log
+
+# Git gibberish example generated repo and files
+example_tasks/git-gibberish/.git/
+example_tasks/git-gibberish/gibberish.txt
+example_tasks/git-gibberish/commit-message.txt

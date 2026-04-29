@@ -1,0 +1,23 @@
+env:
+  IMAGE_NAME?: cjtasks-docker-basic
+  APP_PORT?: 8080
+
+envcheck:
+  printf 'IMAGE_NAME=%s\nAPP_PORT=%s\nAPP_MESSAGE=%s\n' "$IMAGE_NAME" "$APP_PORT" "$APP_MESSAGE"
+
+base:
+  test -f Dockerfile
+  test -f compose.yaml
+  test -f app/server.py
+
+build:
+  docker build -t "$IMAGE_NAME" .
+
+run:
+  docker run --rm -p "$APP_PORT:8080" -e APP_MESSAGE="$APP_MESSAGE" "$IMAGE_NAME"
+
+composeconfig:
+  docker compose config
+
+composeup:
+  docker compose up --build

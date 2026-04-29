@@ -1,0 +1,31 @@
+env:
+  GIT_AUTHOR_NAME?: CJTasks Example
+  GIT_AUTHOR_EMAIL?: cjtasks@example.invalid
+
+base:
+  test -f scripts/generate-gibberish.sh
+  test -f scripts/write-commit-message.sh
+
+initrepo:
+  git init
+  test -f README.md
+
+gibberish:
+  sh scripts/generate-gibberish.sh "$GIBBERISH_FILE"
+
+message:
+  sh scripts/write-commit-message.sh "$COMMIT_MESSAGE_FILE" "$GIBBERISH_FILE"
+
+status:
+  git status --short
+
+commit:
+  git add "$GIBBERISH_FILE" "$COMMIT_MESSAGE_FILE"
+  git -c user.name="$GIT_AUTHOR_NAME" -c user.email="$GIT_AUTHOR_EMAIL" commit -F "$COMMIT_MESSAGE_FILE"
+
+all:
+  git init
+  sh scripts/generate-gibberish.sh "$GIBBERISH_FILE"
+  sh scripts/write-commit-message.sh "$COMMIT_MESSAGE_FILE" "$GIBBERISH_FILE"
+  git add "$GIBBERISH_FILE" "$COMMIT_MESSAGE_FILE"
+  git -c user.name="$GIT_AUTHOR_NAME" -c user.email="$GIT_AUTHOR_EMAIL" commit -F "$COMMIT_MESSAGE_FILE"

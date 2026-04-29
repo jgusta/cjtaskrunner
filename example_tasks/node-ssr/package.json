@@ -1,0 +1,9 @@
+{
+  "name": "cjtasks-node-ssr-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "build": "node src/render.js > dist/index.html"
+  }
+}

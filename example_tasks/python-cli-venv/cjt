@@ -1,0 +1,18 @@
+env:
+  PYTHONPATH: src
+  CLI_MODE?: dryrun
+
+pathcheck:
+  python3 -c 'import os, sys; print("python=" + sys.executable); print("venv=" + os.environ.get("VIRTUAL_ENV", "none")); print("path0=" + os.environ.get("PATH", "").split(":")[0])'
+
+makevenv:
+  python3 -m venv .venv
+
+run:
+  python3 -m local_cli
+
+package:
+  python3 -m compileall src
+
+clean:
+  find src -name __pycache__ -type d -prune -exec rm -rf {} +

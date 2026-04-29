@@ -1,0 +1,22 @@
+env:
+  PYTHONPATH: src
+  APP_ENV?: development
+
+pyinfo:
+  python3 -c 'import os, sys; print(sys.executable); print(os.environ.get("VIRTUAL_ENV", "no venv"))'
+
+base:
+  test -f pyproject.toml
+  test -f src/demo_app/__main__.py
+
+makevenv:
+  python3 -m venv .venv
+
+install:
+  python3 -m pip install -e .
+
+run:
+  python3 -m demo_app
+
+test:
+  python3 -m unittest discover -s tests

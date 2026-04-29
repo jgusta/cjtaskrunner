@@ -1,0 +1,22 @@
+env:
+  CARGO_TERM_COLOR?: always
+  APP_GREETING?: hello
+
+envcheck:
+  printf 'CARGO_TERM_COLOR=%s\nAPP_GREETING=%s\nRUST_LOG=%s\n' "$CARGO_TERM_COLOR" "$APP_GREETING" "$RUST_LOG"
+
+base:
+  test -f Cargo.toml
+  test -f src/main.rs
+
+check:
+  cargo check
+
+run:
+  cargo run
+
+test:
+  cargo test
+
+release:
+  cargo build --release

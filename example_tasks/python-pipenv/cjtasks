@@ -1,0 +1,18 @@
+env:
+  PIPENV_VENV_IN_PROJECT?: 1
+  PYTHONPATH: app
+
+envcheck:
+  printf 'PIPENV_VENV_IN_PROJECT=%s\nPIPENV_EXAMPLE_MESSAGE=%s\nPYTHONPATH=%s\n' "$PIPENV_VENV_IN_PROJECT" "$PIPENV_EXAMPLE_MESSAGE" "$PYTHONPATH"
+
+install:
+  pipenv install --dev
+
+run:
+  pipenv run python -m pipenv_app
+
+test:
+  pipenv run python -m unittest discover -s tests
+
+where:
+  pipenv --venv

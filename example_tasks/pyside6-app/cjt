@@ -1,0 +1,22 @@
+env:
+  PYTHONPATH: app
+  QT_QPA_PLATFORM?: offscreen
+
+pyinfo:
+  python3 -c 'import os, sys; print(sys.executable); print(os.environ.get("VIRTUAL_ENV", "no venv")); print(os.environ.get("QT_QPA_PLATFORM", "unset"))'
+
+base:
+  test -f app/simple_window.py
+  test -f README.md
+
+makevenv:
+  python3 -m venv .venv
+
+install:
+  python3 -m pip install PySide6
+
+run:
+  python3 -m simple_window
+
+smoke:
+  python3 -c 'import simple_window; print(simple_window.window_title())'
