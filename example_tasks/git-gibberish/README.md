@@ -1,13 +1,13 @@
 # Git Gibberish Example
 
-This project demonstrates shell command execution around a local git workflow:
+This project demonstrates a local git workflow:
 
 1. initialize a local git repo,
 2. generate or modify a gibberish file,
 3. write a commit message,
 4. commit the result.
 
-It is useful for checking command ordering, `.env` values, quoted shell variables, and git commands that use taskfile fallback environment values.
+It is useful for checking command ordering, `.env` values, interpolation, and git commands that use taskfile fallback environment values. Lines that depend on shell variable quoting or shell scripts should be written with `@shell` under the round 2 syntax.
 
 ## Notable Files
 

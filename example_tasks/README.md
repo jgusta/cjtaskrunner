@@ -31,8 +31,11 @@ CJTasks behavior demonstrated here:
 - `.env` is loaded from the taskfile directory only.
 - Taskfile `env:` overrides replace inherited environment values.
 - Taskfile fallback entries such as `PORT?: 5173` only apply when the variable is absent.
-- Each command line is independent because CJTasks runs every line through `/bin/sh -c`.
+- Ordinary task lines use the round 2 direct argv execution model.
+- Shell behavior such as redirects, globbing, command chaining, and shell-local variables belongs behind `@shell`.
 - Python examples show `.venv`, `CJ_VENV`, and active `VIRTUAL_ENV` path behavior.
+
+Most example taskfiles were first written for the original shell-per-line MVP. When updating them for round 2, convert shell-dependent lines to `@shell` and keep simple tool invocations as ordinary direct argv lines.
 
 No package installers or Docker builds are required to inspect these examples. Some tasks are realistic commands that need external tools or dependencies before they will succeed; each example README calls those out.
 

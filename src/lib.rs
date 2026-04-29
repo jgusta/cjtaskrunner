@@ -38,7 +38,14 @@ type CjResult<T> = Result<T, CjError>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaskFile {
     env: EnvEntries,
-    tasks: HashMap<String, Vec<String>>,
+    tasks: HashMap<String, Vec<TaskLine>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TaskLine {
+    line_number: usize,
+    indent: usize,
+    text: String,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -54,6 +61,27 @@ enum Section {
     Task,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum QuoteMode {
+    None,
+    Shell,
+}
+
+#[derive(Debug, Clone)]
+struct RuntimeEnv {
+    vars: HashMap<String, String>,
+    exports: HashMap<String, String>,
+}
+
+impl RuntimeEnv {
+    fn new(initial: HashMap<String, String>) -> Self {
+        Self {
+            vars: initial.clone(),
+            exports: initial,
+        }
+    }
+}
+
 pub fn run_cli(args: &[String]) -> CjResult<i32> {
     run_cli_from_cwd(args, &env::current_dir()?)
 }
@@ -62,13 +90,9 @@ fn run_cli_from_cwd(args: &[String], cwd: &Path) -> CjResult<i32> {
     let (task_file, task_name) = resolve_invocation_from(args, cwd)?;
     let base_dir = task_file_base_dir(&task_file);
     let parsed = parse_task_file_path(&task_file)?;
-    let commands = parsed
-        .tasks
-        .get(&task_name)
-        .ok_or_else(|| CjError::new(format!("task not found: {task_name}")))?;
-    let env = build_effective_env(base_dir, &parsed.env)?;
+    let mut env = RuntimeEnv::new(build_effective_env(base_dir, &parsed.env)?);
 
-    run_commands(base_dir, commands, &env)
+    run_task(base_dir, &parsed, &task_name, &mut env, &mut Vec::new())
 }
 
 fn resolve_invocation_from(args: &[String], cwd: &Path) -> CjResult<(PathBuf, String)> {
@@ -154,7 +178,7 @@ fn parse_task_file_path(path: &Path) -> CjResult<TaskFile> {
 
 pub fn parse_task_file(source: &str, path: &Path) -> CjResult<TaskFile> {
     let mut env = EnvEntries::default();
-    let mut tasks: HashMap<String, Vec<String>> = HashMap::new();
+    let mut tasks: HashMap<String, Vec<TaskLine>> = HashMap::new();
     let mut section = Section::Top;
     let mut current_task: Option<String> = None;
     let mut seen_env = false;
@@ -203,27 +227,43 @@ pub fn parse_task_file(source: &str, path: &Path) -> CjResult<TaskFile> {
             continue;
         }
 
-        if !line.starts_with("  ") || line.starts_with("   ") {
+        let indent = line.chars().take_while(|ch| *ch == ' ').count();
+        if indent < 2 || indent % 2 != 0 {
             return Err(line_error(
                 path,
                 line_number,
-                "indented entries must use exactly two leading spaces",
+                "indented entries must use an even number of spaces, at least two",
             ));
         }
 
         match section {
-            Section::Env => parse_env_entry(&line[2..], &mut env, path, line_number)?,
+            Section::Env => {
+                if indent != 2 {
+                    return Err(line_error(
+                        path,
+                        line_number,
+                        "env entries must use exactly two leading spaces",
+                    ));
+                }
+                parse_env_entry(&line[2..], &mut env, path, line_number)?;
+            }
             Section::Task => {
                 let task_name = current_task
                     .as_ref()
                     .ok_or_else(|| line_error(path, line_number, "command without a task"))?;
-                if line[2..].is_empty() {
+                let text = &line[indent..];
+                if text.is_empty() {
                     continue;
                 }
+                validate_directive_syntax(text, path, line_number)?;
                 tasks
                     .get_mut(task_name)
                     .expect("current task must exist")
-                    .push(line[2..].to_string());
+                    .push(TaskLine {
+                        line_number,
+                        indent,
+                        text: text.to_string(),
+                    });
             }
             Section::Top => {
                 return Err(line_error(
@@ -252,6 +292,31 @@ fn parse_top_level_key(line: &str, path: &Path, line_number: usize) -> CjResult<
         return Err(line_error(path, line_number, "invalid top-level key"));
     }
     Ok(key.to_string())
+}
+
+fn validate_directive_syntax(text: &str, path: &Path, line_number: usize) -> CjResult<()> {
+    if let Some(rest) = text.strip_prefix('@') {
+        let (name, args) = split_directive(rest);
+        let colon_block_directive = matches!(
+            name,
+            "if" | "if-exists"
+                | "if-missing"
+                | "if-set"
+                | "if-unset"
+                | "else"
+                | "switch"
+                | "case"
+                | "default"
+        ) && args.trim_end().ends_with(':');
+        if name.ends_with(':') || colon_block_directive {
+            return Err(line_error(
+                path,
+                line_number,
+                "CJTasks directives do not use trailing ':'",
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn parse_env_entry(
@@ -303,10 +368,13 @@ fn validate_task_name(name: &str) -> Result<(), &'static str> {
     if name == "env" {
         return Err("'env' is reserved");
     }
-    if name.chars().all(|ch| ch.is_ascii_alphanumeric()) {
+    if name
+        .chars()
+        .all(|ch| ch == '-' || ch == '_' || ch.is_ascii_alphanumeric())
+    {
         Ok(())
     } else {
-        Err("task names must contain only ASCII letters and digits")
+        Err("task names must contain only ASCII letters, digits, hyphens, and underscores")
     }
 }
 
@@ -453,30 +521,702 @@ fn non_empty_env(effective: &HashMap<String, String>, key: &str) -> Option<Strin
         .map(ToOwned::to_owned)
 }
 
-fn run_commands(
+fn run_task(
     base_dir: &Path,
-    commands: &[String],
-    effective_env: &HashMap<String, String>,
+    task_file: &TaskFile,
+    task_name: &str,
+    effective_env: &mut RuntimeEnv,
+    stack: &mut Vec<String>,
 ) -> CjResult<i32> {
-    for command in commands {
-        let status = Command::new("/bin/sh")
-            .arg("-c")
-            .arg(command)
-            .current_dir(base_dir)
-            .env_clear()
-            .envs(effective_env)
-            .stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .status()
-            .map_err(|err| CjError::new(format!("failed to run command '{command}': {err}")))?;
+    validate_task_name(task_name)
+        .map_err(|err| CjError::new(format!("invalid task name '{task_name}': {err}")))?;
+    if let Some(index) = stack.iter().position(|active| active == task_name) {
+        let mut cycle = stack[index..].to_vec();
+        cycle.push(task_name.to_string());
+        return Err(CjError::new(format!(
+            "recursive @task cycle detected: {}",
+            cycle.join(" -> ")
+        )));
+    }
 
-        if !status.success() {
-            return Ok(status.code().unwrap_or(1));
+    let lines = task_file
+        .tasks
+        .get(task_name)
+        .ok_or_else(|| CjError::new(format!("task not found: {task_name}")))?;
+    stack.push(task_name.to_string());
+    let result = execute_block(
+        base_dir,
+        task_file,
+        lines,
+        0,
+        lines.len(),
+        2,
+        effective_env,
+        stack,
+    );
+    stack.pop();
+    result
+}
+
+fn execute_block(
+    base_dir: &Path,
+    task_file: &TaskFile,
+    lines: &[TaskLine],
+    start: usize,
+    end: usize,
+    indent: usize,
+    effective_env: &mut RuntimeEnv,
+    stack: &mut Vec<String>,
+) -> CjResult<i32> {
+    let mut index = start;
+    while index < end {
+        let line = &lines[index];
+        if line.indent < indent {
+            break;
+        }
+        if line.indent > indent {
+            return Err(CjError::new(format!(
+                "line {}: unexpected indentation",
+                line.line_number
+            )));
+        }
+
+        if let Some(rest) = line.text.strip_prefix('@') {
+            let status = execute_directive(
+                base_dir,
+                task_file,
+                lines,
+                &mut index,
+                end,
+                indent,
+                rest,
+                effective_env,
+                stack,
+            )?;
+            if status != 0 {
+                return Ok(status);
+            }
+        } else {
+            let status = run_direct_command(base_dir, &line.text, effective_env)?;
+            index += 1;
+            if status != 0 {
+                return Ok(status);
+            }
         }
     }
 
     Ok(0)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn execute_directive(
+    base_dir: &Path,
+    task_file: &TaskFile,
+    lines: &[TaskLine],
+    index: &mut usize,
+    end: usize,
+    indent: usize,
+    directive: &str,
+    effective_env: &mut RuntimeEnv,
+    stack: &mut Vec<String>,
+) -> CjResult<i32> {
+    let (name, args) = split_directive(directive);
+    match name {
+        "shell" => {
+            let command = interpolate_shell_text(args, effective_env)?;
+            *index += 1;
+            run_shell_command(base_dir, &command, effective_env)
+        }
+        "task" => {
+            let argv = interpolate_argv(args, &effective_env.vars)?;
+            if argv.len() != 1 {
+                return Err(CjError::new(format!(
+                    "line {}: @task expects exactly one task name",
+                    lines[*index].line_number
+                )));
+            }
+            *index += 1;
+            run_task(base_dir, task_file, &argv[0], effective_env, stack)
+        }
+        "set" | "export" => {
+            if name == "set" {
+                let (key, value) =
+                    parse_env_mutation(args, effective_env, lines[*index].line_number)?;
+                effective_env.vars.insert(key, value);
+            } else {
+                let (key, value) =
+                    parse_export_mutation(args, effective_env, lines[*index].line_number)?;
+                effective_env.vars.insert(key.clone(), value.clone());
+                effective_env.exports.insert(key, value);
+            }
+            *index += 1;
+            Ok(0)
+        }
+        "unset" => {
+            let argv = split_words(args)?;
+            if argv.len() != 1 {
+                return Err(CjError::new(format!(
+                    "line {}: @unset expects exactly one variable name",
+                    lines[*index].line_number
+                )));
+            }
+            validate_env_name(&argv[0]).map_err(|err| {
+                CjError::new(format!(
+                    "line {}: invalid env name '{}': {err}",
+                    lines[*index].line_number, argv[0]
+                ))
+            })?;
+            effective_env.vars.remove(&argv[0]);
+            effective_env.exports.remove(&argv[0]);
+            *index += 1;
+            Ok(0)
+        }
+        "if" | "if-exists" | "if-missing" | "if-set" | "if-unset" => execute_if_directive(
+            base_dir,
+            task_file,
+            lines,
+            index,
+            end,
+            indent,
+            name,
+            args,
+            effective_env,
+            stack,
+        ),
+        "else" => Err(CjError::new(format!(
+            "line {}: @else without matching @if",
+            lines[*index].line_number
+        ))),
+        "switch" => execute_switch_directive(
+            base_dir,
+            task_file,
+            lines,
+            index,
+            end,
+            indent,
+            args,
+            effective_env,
+            stack,
+        ),
+        "case" | "default" => Err(CjError::new(format!(
+            "line {}: @{name} without matching @switch",
+            lines[*index].line_number
+        ))),
+        "" => Err(CjError::new(format!(
+            "line {}: empty directive",
+            lines[*index].line_number
+        ))),
+        _ => Err(CjError::new(format!(
+            "line {}: unknown directive @{name}",
+            lines[*index].line_number
+        ))),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn execute_if_directive(
+    base_dir: &Path,
+    task_file: &TaskFile,
+    lines: &[TaskLine],
+    index: &mut usize,
+    end: usize,
+    indent: usize,
+    name: &str,
+    args: &str,
+    effective_env: &mut RuntimeEnv,
+    stack: &mut Vec<String>,
+) -> CjResult<i32> {
+    let condition = evaluate_condition(base_dir, name, args, effective_env)?;
+    let then_start = *index + 1;
+    let then_end = find_block_end(lines, then_start, end, indent);
+    let mut else_range = None;
+
+    if then_end < end && lines[then_end].indent == indent && lines[then_end].text == "@else" {
+        let else_start = then_end + 1;
+        let else_end = find_block_end(lines, else_start, end, indent);
+        else_range = Some((else_start, else_end));
+        *index = else_end;
+    } else {
+        *index = then_end;
+    }
+
+    if condition {
+        execute_block(
+            base_dir,
+            task_file,
+            lines,
+            then_start,
+            then_end,
+            indent + 2,
+            effective_env,
+            stack,
+        )
+    } else if let Some((else_start, else_end)) = else_range {
+        execute_block(
+            base_dir,
+            task_file,
+            lines,
+            else_start,
+            else_end,
+            indent + 2,
+            effective_env,
+            stack,
+        )
+    } else {
+        Ok(0)
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn execute_switch_directive(
+    base_dir: &Path,
+    task_file: &TaskFile,
+    lines: &[TaskLine],
+    index: &mut usize,
+    end: usize,
+    indent: usize,
+    args: &str,
+    effective_env: &mut RuntimeEnv,
+    stack: &mut Vec<String>,
+) -> CjResult<i32> {
+    let values = interpolate_argv(args, &effective_env.vars)?;
+    if values.len() != 1 {
+        return Err(CjError::new(format!(
+            "line {}: @switch expects exactly one value",
+            lines[*index].line_number
+        )));
+    }
+    let switch_value = &values[0];
+    let switch_start = *index + 1;
+    let switch_end = find_block_end(lines, switch_start, end, indent);
+    let case_indent = indent + 2;
+    let body_indent = indent + 4;
+    let mut selected: Option<(usize, usize)> = None;
+    let mut default: Option<(usize, usize)> = None;
+    let mut cursor = switch_start;
+
+    while cursor < switch_end {
+        let line = &lines[cursor];
+        if line.indent != case_indent {
+            return Err(CjError::new(format!(
+                "line {}: @switch body must contain @case or @default entries",
+                line.line_number
+            )));
+        }
+        let Some(rest) = line.text.strip_prefix('@') else {
+            return Err(CjError::new(format!(
+                "line {}: @switch body entries must use @case or @default",
+                line.line_number
+            )));
+        };
+        let (name, args) = split_directive(rest);
+        if name != "case" && name != "default" {
+            return Err(CjError::new(format!(
+                "line {}: @switch body entries must use @case or @default",
+                line.line_number
+            )));
+        }
+
+        let body_start = cursor + 1;
+        let body_end = find_case_body_end(lines, body_start, switch_end, case_indent);
+        if name == "case" {
+            let case_values = interpolate_argv(args, &effective_env.vars)?;
+            if case_values.len() != 1 {
+                return Err(CjError::new(format!(
+                    "line {}: @case expects exactly one value",
+                    line.line_number
+                )));
+            }
+            if selected.is_none() && case_values[0] == *switch_value {
+                selected = Some((body_start, body_end));
+            }
+        } else {
+            if !args.trim().is_empty() {
+                return Err(CjError::new(format!(
+                    "line {}: @default does not take arguments",
+                    line.line_number
+                )));
+            }
+            default.get_or_insert((body_start, body_end));
+        }
+        cursor = body_end;
+    }
+
+    *index = switch_end;
+    if let Some((start, end)) = selected.or(default) {
+        execute_block(
+            base_dir,
+            task_file,
+            lines,
+            start,
+            end,
+            body_indent,
+            effective_env,
+            stack,
+        )
+    } else {
+        Ok(0)
+    }
+}
+
+fn find_block_end(lines: &[TaskLine], start: usize, end: usize, parent_indent: usize) -> usize {
+    let mut cursor = start;
+    while cursor < end && lines[cursor].indent > parent_indent {
+        cursor += 1;
+    }
+    cursor
+}
+
+fn find_case_body_end(lines: &[TaskLine], start: usize, end: usize, case_indent: usize) -> usize {
+    let mut cursor = start;
+    while cursor < end && lines[cursor].indent > case_indent {
+        cursor += 1;
+    }
+    cursor
+}
+
+fn evaluate_condition(
+    base_dir: &Path,
+    name: &str,
+    args: &str,
+    effective_env: &RuntimeEnv,
+) -> CjResult<bool> {
+    match name {
+        "if" => {
+            let argv = interpolate_argv(args, &effective_env.vars)?;
+            match argv.as_slice() {
+                [value] => Ok(is_truthy(value)),
+                [left, op, right] if op == "==" => Ok(left == right),
+                [left, op, right] if op == "!=" => Ok(left != right),
+                _ => Err(CjError::new("@if expects a value or '<left> == <right>'")),
+            }
+        }
+        "if-exists" | "if-missing" => {
+            let argv = interpolate_argv(args, &effective_env.vars)?;
+            if argv.len() != 1 {
+                return Err(CjError::new(format!("@{name} expects exactly one path")));
+            }
+            let path = base_dir.join(&argv[0]);
+            Ok(if name == "if-exists" {
+                path.exists()
+            } else {
+                !path.exists()
+            })
+        }
+        "if-set" | "if-unset" => {
+            let argv = split_words(args)?;
+            if argv.len() != 1 {
+                return Err(CjError::new(format!(
+                    "@{name} expects exactly one variable name"
+                )));
+            }
+            let variable = parse_variable_name_token(&argv[0])?;
+            let exists = effective_env.vars.contains_key(&variable);
+            Ok(if name == "if-set" { exists } else { !exists })
+        }
+        _ => unreachable!("condition directive checked by caller"),
+    }
+}
+
+fn is_truthy(value: &str) -> bool {
+    !(value.is_empty() || value == "0" || value.eq_ignore_ascii_case("false"))
+}
+
+fn parse_env_mutation(
+    args: &str,
+    effective_env: &RuntimeEnv,
+    line_number: usize,
+) -> CjResult<(String, String)> {
+    let (key, value) = args
+        .trim_start()
+        .split_once(char::is_whitespace)
+        .ok_or_else(|| CjError::new(format!("line {line_number}: @set expects NAME and value")))?;
+    validate_env_name(key).map_err(|err| {
+        CjError::new(format!(
+            "line {line_number}: invalid env name '{key}': {err}"
+        ))
+    })?;
+    let value = interpolate_text(value.trim_start(), &effective_env.vars, QuoteMode::None)?;
+    Ok((key.to_string(), value))
+}
+
+fn parse_export_mutation(
+    args: &str,
+    effective_env: &RuntimeEnv,
+    line_number: usize,
+) -> CjResult<(String, String)> {
+    let trimmed = args.trim_start();
+    if trimmed.is_empty() {
+        return Err(CjError::new(format!(
+            "line {line_number}: @export expects NAME or NAME value"
+        )));
+    }
+    if let Some((key, value)) = trimmed.split_once(char::is_whitespace) {
+        validate_env_name(key).map_err(|err| {
+            CjError::new(format!(
+                "line {line_number}: invalid env name '{key}': {err}"
+            ))
+        })?;
+        let value = interpolate_text(value.trim_start(), &effective_env.vars, QuoteMode::None)?;
+        Ok((key.to_string(), value))
+    } else {
+        validate_env_name(trimmed).map_err(|err| {
+            CjError::new(format!(
+                "line {line_number}: invalid env name '{trimmed}': {err}"
+            ))
+        })?;
+        let value = effective_env.vars.get(trimmed).cloned().ok_or_else(|| {
+            CjError::new(format!(
+                "line {line_number}: cannot export unset variable '{trimmed}'"
+            ))
+        })?;
+        Ok((trimmed.to_string(), value))
+    }
+}
+
+fn parse_variable_name_token(token: &str) -> CjResult<String> {
+    let name = if let Some(name) = token.strip_prefix("${").and_then(|v| v.strip_suffix('}')) {
+        name
+    } else if let Some(name) = token.strip_prefix('$') {
+        name
+    } else {
+        token
+    };
+    validate_env_name(name)
+        .map_err(|err| CjError::new(format!("invalid variable name '{token}': {err}")))?;
+    Ok(name.to_string())
+}
+
+fn split_directive(directive: &str) -> (&str, &str) {
+    let trimmed = directive.trim_start();
+    match trimmed.find(char::is_whitespace) {
+        Some(index) => (&trimmed[..index], trimmed[index..].trim_start()),
+        None => (trimmed, ""),
+    }
+}
+
+fn run_direct_command(base_dir: &Path, command: &str, effective_env: &RuntimeEnv) -> CjResult<i32> {
+    let argv = interpolate_argv(command, &effective_env.vars)?;
+    let Some(program) = argv.first() else {
+        return Ok(0);
+    };
+
+    let status = Command::new(program)
+        .args(&argv[1..])
+        .current_dir(base_dir)
+        .env_clear()
+        .envs(&effective_env.exports)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .map_err(|err| CjError::new(format!("failed to run command '{command}': {err}")))?;
+
+    Ok(status.code().unwrap_or(1))
+}
+
+fn run_shell_command(base_dir: &Path, command: &str, effective_env: &RuntimeEnv) -> CjResult<i32> {
+    let status = Command::new("/bin/sh")
+        .arg("-c")
+        .arg(command)
+        .current_dir(base_dir)
+        .env_clear()
+        .envs(&effective_env.exports)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .map_err(|err| CjError::new(format!("failed to run shell command '{command}': {err}")))?;
+
+    Ok(status.code().unwrap_or(1))
+}
+
+fn interpolate_argv(
+    command: &str,
+    effective_env: &HashMap<String, String>,
+) -> CjResult<Vec<String>> {
+    split_words(command)?
+        .into_iter()
+        .map(|word| interpolate_text(&word, effective_env, QuoteMode::None))
+        .collect()
+}
+
+fn interpolate_shell_text(command: &str, effective_env: &RuntimeEnv) -> CjResult<String> {
+    interpolate_text(command, &effective_env.vars, QuoteMode::Shell)
+}
+
+fn interpolate_text(
+    input: &str,
+    effective_env: &HashMap<String, String>,
+    quote_mode: QuoteMode,
+) -> CjResult<String> {
+    let mut output = String::new();
+    let mut chars = input.char_indices().peekable();
+    while let Some((_, ch)) = chars.next() {
+        if ch == '\\' {
+            if let Some((_, '$')) = chars.peek().copied() {
+                chars.next();
+                output.push('$');
+            } else {
+                output.push(ch);
+            }
+            continue;
+        }
+        if ch != '$' {
+            output.push(ch);
+            continue;
+        }
+
+        let Some((_, next)) = chars.peek().copied() else {
+            output.push('$');
+            continue;
+        };
+        if next == '{' {
+            chars.next();
+            let mut expression = String::new();
+            let mut closed = false;
+            for (_, expr_ch) in chars.by_ref() {
+                if expr_ch == '}' {
+                    closed = true;
+                    break;
+                }
+                expression.push(expr_ch);
+            }
+            if !closed {
+                return Err(CjError::new("unterminated variable interpolation"));
+            }
+            let value = expand_braced(&expression, effective_env)?;
+            output.push_str(&quote_value(&value, quote_mode));
+            continue;
+        }
+        if !is_env_start(next) {
+            output.push('$');
+            continue;
+        }
+        let mut name = String::new();
+        while let Some((_, name_ch)) = chars.peek().copied() {
+            if is_env_continue(name_ch) {
+                chars.next();
+                name.push(name_ch);
+            } else {
+                break;
+            }
+        }
+        let value = effective_env.get(&name).cloned().unwrap_or_default();
+        output.push_str(&quote_value(&value, quote_mode));
+    }
+    Ok(output)
+}
+
+fn expand_braced(expression: &str, effective_env: &HashMap<String, String>) -> CjResult<String> {
+    if let Some((name, fallback)) = expression.split_once(":-") {
+        validate_env_name(name).map_err(|err| {
+            CjError::new(format!(
+                "invalid variable interpolation '{expression}': {err}"
+            ))
+        })?;
+        Ok(match effective_env.get(name) {
+            Some(value) if !value.is_empty() => value.clone(),
+            _ => fallback.to_string(),
+        })
+    } else {
+        validate_env_name(expression).map_err(|err| {
+            CjError::new(format!(
+                "invalid variable interpolation '{expression}': {err}"
+            ))
+        })?;
+        effective_env
+            .get(expression)
+            .cloned()
+            .ok_or_else(|| CjError::new(format!("missing variable: {expression}")))
+    }
+}
+
+fn quote_value(value: &str, quote_mode: QuoteMode) -> String {
+    match quote_mode {
+        QuoteMode::None => value.to_string(),
+        QuoteMode::Shell => shlex::try_quote(value)
+            .map(|quoted| quoted.into_owned())
+            .unwrap_or_else(|_| "''".to_string()),
+    }
+}
+
+fn is_env_start(ch: char) -> bool {
+    ch == '_' || ch.is_ascii_alphabetic()
+}
+
+fn is_env_continue(ch: char) -> bool {
+    ch == '_' || ch.is_ascii_alphanumeric()
+}
+
+fn split_words(command: &str) -> CjResult<Vec<String>> {
+    let mut words = Vec::new();
+    let mut current = String::new();
+    let mut chars = command.chars().peekable();
+    let mut quote: Option<char> = None;
+    let mut in_word = false;
+
+    while let Some(ch) = chars.next() {
+        match quote {
+            Some(active) if ch == active => {
+                quote = None;
+                in_word = true;
+            }
+            Some('\'') => {
+                current.push(ch);
+                in_word = true;
+            }
+            Some('"') if ch == '\\' => {
+                if let Some(next) = chars.next() {
+                    if next == '$' {
+                        current.push('\\');
+                    }
+                    current.push(next);
+                    in_word = true;
+                } else {
+                    current.push(ch);
+                    in_word = true;
+                }
+            }
+            Some(_) => {
+                current.push(ch);
+                in_word = true;
+            }
+            None if ch == '\'' || ch == '"' => {
+                quote = Some(ch);
+                in_word = true;
+            }
+            None if ch.is_whitespace() => {
+                if in_word {
+                    words.push(std::mem::take(&mut current));
+                    in_word = false;
+                }
+            }
+            None if ch == '\\' => {
+                if let Some(next) = chars.next() {
+                    if next == '$' {
+                        current.push('\\');
+                    }
+                    current.push(next);
+                } else {
+                    current.push(ch);
+                }
+                in_word = true;
+            }
+            None => {
+                current.push(ch);
+                in_word = true;
+            }
+        }
+    }
+
+    if let Some(active) = quote {
+        return Err(CjError::new(format!("unterminated {active} quote")));
+    }
+    if in_word {
+        words.push(current);
+    }
+    Ok(words)
 }
 
 #[cfg(test)]
@@ -491,6 +1231,13 @@ mod tests {
             .expect("clock")
             .as_nanos();
         env::temp_dir().join(format!("cjtasks-{name}-{id}"))
+    }
+
+    fn minimal_env() -> RuntimeEnv {
+        RuntimeEnv::new(HashMap::from([(
+            "PATH".to_string(),
+            env::var("PATH").unwrap_or_default(),
+        )]))
     }
 
     #[test]
@@ -517,8 +1264,8 @@ test123:
         assert_eq!(parsed.env.overrides["NODE_ENV"], "development");
         assert_eq!(parsed.env.overrides["EMPTY"], "");
         assert_eq!(parsed.env.fallbacks["PORT"], "5173");
-        assert_eq!(parsed.tasks["dev"], vec!["echo # retained"]);
-        assert_eq!(parsed.tasks["test123"], vec!["cargo test"]);
+        assert_eq!(parsed.tasks["dev"][0].text, "echo # retained");
+        assert_eq!(parsed.tasks["test123"][0].text, "cargo test");
     }
 
     #[test]
@@ -537,7 +1284,17 @@ test123:
         let err = parse_task_file("run:\n   echo hi\n", Path::new("cjt"))
             .expect_err("bad indentation should fail");
 
-        assert!(err.to_string().contains("exactly two leading spaces"));
+        assert!(err.to_string().contains("even number of spaces"));
+    }
+
+    #[test]
+    fn rejects_trailing_colon_directives() {
+        let err = parse_task_file("run:\n  @if true:\n    echo hi\n", Path::new("cjt"))
+            .expect_err("directive colon should fail");
+
+        assert!(err
+            .to_string()
+            .contains("directives do not use trailing ':'"));
     }
 
     #[test]
@@ -608,21 +1365,144 @@ test123:
     }
 
     #[test]
-    fn commands_are_independent_and_run_from_base_dir() {
-        let dir = test_path("run");
+    fn ordinary_commands_execute_directly_without_shell_splitting_interpolated_values() {
+        let dir = test_path("direct");
         fs::create_dir_all(&dir).expect("mkdir");
-        let commands = vec![
-            "cd /".to_string(),
-            "printf '%s' \"$PWD\" > pwd.txt".to_string(),
-        ];
-        let env = HashMap::from([("PATH".to_string(), env::var("PATH").unwrap_or_default())]);
+        let parsed = parse_task_file(
+            "run:\n  sh -c 'test \"$1\" = \"a b; echo injected\"' ignored $CJTEST_VALUE\n",
+            Path::new("cjt"),
+        )
+        .expect("parse");
+        let mut env = minimal_env();
+        env.vars
+            .insert("CJTEST_VALUE".to_string(), "a b; echo injected".to_string());
 
-        let code = run_commands(&dir, &commands, &env).expect("run");
+        let code = run_task(&dir, &parsed, "run", &mut env, &mut Vec::new()).expect("run");
         assert_eq!(code, 0);
-        let reported = fs::read_to_string(dir.join("pwd.txt")).expect("pwd");
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn shell_execution_is_explicit_and_quotes_interpolated_values() {
+        let dir = test_path("shell");
+        fs::create_dir_all(&dir).expect("mkdir");
+        let parsed = parse_task_file(
+            "run:\n  @shell printf '%s' $CJTEST_VALUE > out.txt\n",
+            Path::new("cjt"),
+        )
+        .expect("parse");
+        let mut env = minimal_env();
+        env.vars
+            .insert("CJTEST_VALUE".to_string(), "safe; echo bad".to_string());
+
+        let code = run_task(&dir, &parsed, "run", &mut env, &mut Vec::new()).expect("run");
+        assert_eq!(code, 0);
         assert_eq!(
-            fs::canonicalize(reported).expect("reported pwd"),
-            fs::canonicalize(&dir).expect("dir")
+            fs::read_to_string(dir.join("out.txt")).expect("out"),
+            "safe; echo bad"
+        );
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn task_composition_and_cycle_detection() {
+        let parsed = parse_task_file(
+            "first:\n  @task second\nsecond:\n  true\ncycle:\n  @task cycle\n",
+            Path::new("cjt"),
+        )
+        .expect("parse");
+        let dir = test_path("task");
+        fs::create_dir_all(&dir).expect("mkdir");
+        let mut env = minimal_env();
+        assert_eq!(
+            run_task(&dir, &parsed, "first", &mut env, &mut Vec::new()).expect("run"),
+            0
+        );
+
+        let err = run_task(&dir, &parsed, "cycle", &mut env, &mut Vec::new())
+            .expect_err("cycle should fail");
+        assert!(err.to_string().contains("recursive @task cycle"));
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn mutable_env_conditionals_and_switches() {
+        let dir = test_path("controls");
+        fs::create_dir_all(&dir).expect("mkdir");
+        File::create(dir.join("exists.txt")).expect("file");
+        let parsed = parse_task_file(
+            r#"run:
+  @set MODE prod
+  @if $MODE == prod
+    @shell printf yes > if.txt
+  @else
+    @shell printf no > if.txt
+  @if-exists exists.txt
+    @export FOUND 1
+  @if-set FOUND
+    @shell printf found > found.txt
+  @switch $MODE
+    @case dev
+      @shell printf dev > switch.txt
+    @case prod
+      @shell printf prod > switch.txt
+    @default
+      @shell printf default > switch.txt
+  @unset FOUND
+  @if-unset FOUND
+    @shell printf unset > unset.txt
+"#,
+            Path::new("cjt"),
+        )
+        .expect("parse");
+        let mut env = minimal_env();
+
+        let code = run_task(&dir, &parsed, "run", &mut env, &mut Vec::new()).expect("run");
+        assert_eq!(code, 0);
+        assert_eq!(fs::read_to_string(dir.join("if.txt")).expect("if"), "yes");
+        assert_eq!(
+            fs::read_to_string(dir.join("found.txt")).expect("found"),
+            "found"
+        );
+        assert_eq!(
+            fs::read_to_string(dir.join("switch.txt")).expect("switch"),
+            "prod"
+        );
+        assert_eq!(
+            fs::read_to_string(dir.join("unset.txt")).expect("unset"),
+            "unset"
+        );
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn set_is_internal_until_exported() {
+        let dir = test_path("export");
+        fs::create_dir_all(&dir).expect("mkdir");
+        let parsed = parse_task_file(
+            r#"run:
+  @set SECRET hidden
+  @shell printf "\${SECRET:-missing}" > before.txt
+  @export SECRET
+  @shell printf "\$SECRET" > after.txt
+"#,
+            Path::new("cjt"),
+        )
+        .expect("parse");
+        let mut env = minimal_env();
+
+        let code = run_task(&dir, &parsed, "run", &mut env, &mut Vec::new()).expect("run");
+        assert_eq!(code, 0);
+        assert_eq!(
+            fs::read_to_string(dir.join("before.txt")).expect("before"),
+            "missing"
+        );
+        assert_eq!(
+            fs::read_to_string(dir.join("after.txt")).expect("after"),
+            "hidden"
         );
 
         fs::remove_dir_all(dir).expect("cleanup");
@@ -671,13 +1551,13 @@ test123:
     fn bare_relative_task_file_runs_from_current_directory() {
         let dir = test_path("relative-file");
         fs::create_dir_all(&dir).expect("mkdir");
-        fs::write(dir.join("cjt"), "run:\n  printf '%s' \"$PWD\" > out.txt\n").expect("write cjt");
+        fs::write(dir.join("cjt"), "run:\n  @shell pwd > out.txt\n").expect("write cjt");
 
         let code = run_cli_from_cwd(&["cjt".to_string(), "run".to_string()], &dir).expect("run");
         assert_eq!(code, 0);
         let reported = fs::read_to_string(dir.join("out.txt")).expect("out");
         assert_eq!(
-            fs::canonicalize(reported).expect("reported pwd"),
+            fs::canonicalize(reported.trim()).expect("reported pwd"),
             fs::canonicalize(&dir).expect("dir")
         );
 

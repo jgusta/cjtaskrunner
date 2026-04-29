@@ -15,7 +15,7 @@ start:
 
 build:
   mkdir -p dist
-  node src/render.js > dist/index.html
+  @shell node src/render.js > dist/index.html
 
 clean:
   rm -rf dist

@@ -1,6 +1,19 @@
 # CJTasks Plan
 
-CJTasks is a Rust-based CLI task runner with executable `cj`. It runs named tasks from a local task file using a small CJTasks-specific format, shell-like command execution, deterministic environment merging, task-file-directory execution, `.env` loading, and Python virtual environment awareness.
+CJTasks is a Rust-based CLI task runner with executable `cj`. It runs named tasks from a local task file using a small CJTasks-specific format, deterministic environment merging, task-file-directory execution, `.env` loading, and Python virtual environment awareness.
+
+Round 2 updates the original MVP command model:
+
+- Ordinary task lines execute directly as argv by default.
+- Shell behavior is explicit through `@shell`.
+- CJTasks control flow uses `@` directives with no trailing colons.
+- Variables interpolate with `$NAME`, `${NAME}`, and `${NAME:-fallback}`.
+- Runtime variable state is managed with `@set`, `@export`, and `@unset`.
+- Task composition uses `@task`.
+- Conditional blocks use `@if`, `@else`, `@if-exists`, `@if-missing`, `@if-set`, and `@if-unset`.
+- Switch blocks use `@switch`, `@case`, and `@default`.
+
+The sections below describe the current implementation direction after the round 2 update.
 
 This plan is written so a builder can implement the MVP without pausing for design decisions.
 
@@ -8,13 +21,14 @@ This plan is written so a builder can implement the MVP without pausing for desi
 
 - Executable name: `cj`.
 - Recognized task file names: `cjt`, `cjtasks`.
-- Task names are alphanumeric slugs only: `^[A-Za-z0-9]+$`.
+- Task names are slugs: `^[A-Za-z0-9_-]+$`.
 - `cj <task>` searches only the current directory.
 - `cj <taskfile-or-directory> <task>` uses the given task file, or searches only the given directory.
 - If both `cjt` and `cjtasks` exist in a searched directory, `cjt` wins.
 - The task file's directory is always the command working directory.
-- Commands run one line at a time through a fixed shell on Unix: `/bin/sh -c`.
-- Each command line is independent; `cd`, shell variables, and `export` do not persist to the next line.
+- Ordinary command lines run as direct argv commands.
+- Shell behavior is explicit with `@shell`, which uses `/bin/sh -c` on Unix.
+- Each command line is independent; process state such as `cd` does not persist to the next line.
 - Commands stop on the first non-zero exit status.
 - Standard input, output, and error are inherited.
 - `.env` is loaded from the task file directory only.
@@ -82,19 +96,20 @@ The format is CJTasks-specific and intentionally only YAML-like. Do not use a ge
 
 ### Tasks
 
-- Task keys are top-level lines with an alphanumeric slug followed by `:`.
-- Task names must match `^[A-Za-z0-9]+$`.
-- Example task keys: `build:`, `dev:`, `test123:`.
+- Task keys are top-level lines with a slug followed by `:`.
+- Task names must match `^[A-Za-z0-9_-]+$`.
+- Example task keys: `build:`, `dev:`, `test123:`, `build-prod:`.
 - `env:` is reserved and cannot be used as a task name.
 
 Commands:
 
-- Task commands are non-empty lines indented by exactly two spaces under the task key.
+- Task commands are non-empty lines indented by at least two spaces under the task key.
 - The command text is the line after removing the leading two spaces.
 - Multiple indented command lines run in order.
+- Nested directive blocks use additional two-space indentation.
 - Blank lines inside or between tasks are ignored.
 - Comment-only lines are ignored.
-- Inline comments are not stripped from command lines; `echo # hi` is passed to the shell as written.
+- Inline comments are not stripped from command lines; `echo # hi` is passed to the command parser as written.
 
 ### Comments
 
@@ -148,6 +163,18 @@ build:
   cargo build --release
 ```
 
+Round 2 directive example:
+
+```yaml
+deploy:
+  @set MODE production
+  @task build
+  @if $MODE == production
+    @shell ./scripts/deploy.sh > deploy.log
+  @else
+    echo skip
+```
+
 ## Environment Handling
 
 Build the effective environment in this order:
@@ -183,21 +210,29 @@ MVP `.env` parsing:
 
 ## PATH and Executable Behavior
 
-Commands run through `/bin/sh -c` on Unix-like platforms. This provides expected shell behavior for common project commands:
+Ordinary commands execute directly with `std::process::Command` after CJTasks splits the line into argv tokens and performs safe interpolation:
 
 - `npm run vite`
 - `cargo test`
 - `python -m pytest`
-- Pipes, redirects, globbing, variable expansion, and command chaining supported by `/bin/sh`.
+
+Shell-only behavior requires `@shell`:
+
+- Pipes.
+- Redirects.
+- Globbing.
+- Command chaining.
+- Shell builtins.
 
 Execution rules:
 
 - The child process working directory is the task file directory.
 - The child environment is the effective environment described above.
-- Executables are resolved by the shell using the effective `PATH`.
-- CJTasks does not manually parse command arguments in MVP.
+- Executables are resolved through the effective `PATH`.
+- Interpolated values in ordinary commands are inserted as single argv values.
+- Interpolated values in `@shell` are shell-quoted before `/bin/sh -c` sees them.
 
-Non-Unix behavior is deferred. If Windows support is added later, define an equivalent fixed shell strategy explicitly.
+Non-Unix direct argv execution should use the platform process API. If Windows `@shell` support is added later, define the platform shell strategy explicitly.
 
 ## Python Virtual Environment Awareness
 
@@ -229,14 +264,15 @@ For each invocation:
 4. Parse the task file.
 5. Validate and resolve the requested task by name.
 6. Build the effective environment.
-7. Run the task's commands in order from the base directory.
+7. Run the task's steps in order from the base directory.
 8. Stop on the first failing command.
 9. Exit with the failing command status, or `0` if all commands succeed.
 
 Command semantics:
 
-- Each command is executed as its own shell process.
-- Shell state does not persist across command lines.
+- Ordinary commands execute directly as child processes.
+- `@shell` commands execute as their own shell process.
+- Process state does not persist across command lines.
 - Standard input, output, and error are inherited.
 - If a command is terminated by signal on Unix, return a non-zero failure code and include the signal in the error message when possible.
 
@@ -275,7 +311,8 @@ Errors should include:
 - Implement argument parsing for one-argument and two-argument forms.
 - Implement task file discovery for `cjt` and `cjtasks`, with `cjt` precedence.
 - Parse task keys, comment-only lines, blank lines, and exactly two-space-indented command lines.
-- Run each command through `/bin/sh -c` from the task file's directory.
+- Run ordinary commands directly from the task file's directory.
+- Add explicit `@shell` for shell-dependent commands.
 - Inherit process environment and current `PATH`.
 - Report basic errors.
 
@@ -315,8 +352,8 @@ Errors should include:
 - Unknown task returns a not-found error listing the requested task.
 - Invalid task name returns a validation error before command execution.
 - Commands run sequentially and stop after the first failure.
-- `cd subdir` on one line does not affect the next line.
-- `npm run vite` is passed to `/bin/sh -c` and uses `PATH`.
+- `@shell cd subdir` on one line does not affect the next line.
+- `npm run vite` runs as direct argv and uses `PATH`.
 - `.env` adds absent variables but does not replace process variables.
 - `env:` fallback entries add absent variables but do not replace empty present variables.
 - `env:` override entries replace existing values.
@@ -331,9 +368,9 @@ Errors should include:
 - Task discovery searches only the current or explicitly provided directory.
 - `.env` does not override inherited process environment variables.
 - `.env.local` and other env file names are not supported in MVP.
-- Commands run through `/bin/sh -c` on Unix.
-- Each command line is independent and does not share shell state.
-- Task names are letters and numbers only.
+- Ordinary commands run as direct argv; `@shell` runs through `/bin/sh -c` on Unix.
+- Each command line is independent and does not share process state.
+- Task names allow letters, numbers, hyphens, and underscores.
 - Task arguments are deferred.
 - Alternate Python virtualenv variable for CJTasks is `CJ_VENV`; active Python env uses standard `VIRTUAL_ENV`.
 - An active virtual environment overrides a discovered `.venv`.

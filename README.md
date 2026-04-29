@@ -2,7 +2,7 @@
 
 CJTasks is a small Rust task runner with the executable name `cj`. It runs named tasks from a project-local taskfile named `cjt` or `cjtasks`, merges environment values in a predictable order, loads a local `.env`, and makes Python virtual environments easier to use by adjusting `PATH`.
 
-The MVP is intentionally simple: it is a line-oriented task runner, not a shell replacement, Make clone, or full YAML interpreter.
+The taskfile format is intentionally small: ordinary task lines run commands directly by default, while CJTasks behavior is written with explicit `@` directives.
 
 ## Install, Build, and Run
 
@@ -66,12 +66,16 @@ env:
   NODE_ENV: development
   PORT?: 5173
 
-base:
+setup:
   test -f package.json
   test -f src/main.js
 
 dev:
-  npm run dev -- --host 127.0.0.1 --port "$PORT"
+  @task setup
+  npm run dev -- --host 127.0.0.1 --port $PORT
+
+dist:
+  @shell mkdir -p dist && cp src/*.js dist/
 ```
 
 Tasks:
@@ -79,10 +83,18 @@ Tasks:
 - Task names are ASCII letters and digits only, such as `build`, `test`, or `test123`.
 - `env` is reserved for the global environment section.
 - Each non-empty command line under a task runs in order.
-- Commands run through `/bin/sh -c`.
+- Ordinary command lines are split into argv and executed directly.
+- Shell syntax requires `@shell`.
 - Standard input, output, and error are inherited.
 - Execution stops at the first command that exits non-zero.
-- Each command line is independent, so `cd`, shell variables, and `export` do not persist to the next taskfile command line.
+- Each command line is independent, so process working-directory changes and shell-local state do not persist to the next taskfile command line.
+
+Directives:
+
+- Directive lines start with `@`.
+- Directives do not use trailing colons.
+- Nested directive bodies use another two spaces of indentation.
+- Supported control directives are `@task`, `@shell`, `@set`, `@export`, `@unset`, `@if`, `@else`, `@switch`, `@case`, and `@default`.
 
 Comments and blank lines:
 
@@ -96,6 +108,156 @@ Environment entries:
 - `NAME?: value` is a fallback and applies only when the variable is absent.
 - Environment names must start with a letter or underscore, then use only letters, digits, and underscores.
 - Matching single or double quotes around a whole value are stripped for convenience.
+
+## Command Execution
+
+Ordinary task lines run as direct argv commands:
+
+```yaml
+build:
+  cargo build --release
+  npm run build
+```
+
+Those lines execute like:
+
+```text
+["cargo", "build", "--release"]
+["npm", "run", "build"]
+```
+
+This means pipes, redirects, command chaining, glob expansion, and shell builtins are not interpreted on ordinary lines. A token such as `>` is passed as a literal argument.
+
+Use `@shell` when a task intentionally needs shell behavior:
+
+```yaml
+bundle:
+  @shell mkdir -p dist && cat src/*.js > dist/app.js
+```
+
+On Unix-like systems, `@shell` uses `/bin/sh -c`.
+
+## Interpolation
+
+CJTasks interpolates variables in ordinary command argv tokens, `@shell` command text, and directive arguments.
+
+Supported forms:
+
+```text
+$NAME
+${NAME}
+${NAME:-fallback}
+```
+
+Rules:
+
+- `$NAME` and `${NAME}` read the current CJTasks variable value.
+- `${NAME:-fallback}` uses `fallback` when `NAME` is missing or empty.
+- Missing variables without a fallback are errors.
+- Interpolated values in ordinary command lines stay one argv value. If `NAME` is `-p dir/mydir`, then `mkdir $NAME` passes one argument with that exact value; it does not become two arguments.
+- Interpolated values in `@shell` are quoted before shell execution.
+- Escape literal interpolation with `\$NAME` or `\${NAME}`.
+
+CJTasks does not support command substitution, arithmetic expansion, pattern replacement, or nested expansion.
+
+## Task Composition
+
+Use `@task` to run another task from the same taskfile:
+
+```yaml
+ci:
+  @task fmt
+  @task test
+  @task build
+
+fmt:
+  cargo fmt --check
+
+test:
+  cargo test
+
+build:
+  cargo build
+```
+
+`@task name` uses CJTasks semantics directly. The called task runs with the same taskfile, base directory, and effective variable state. Execution stops if the called task fails, and recursive task cycles are reported as errors.
+
+## Runtime Variables
+
+The `env:` block defines the initial environment. Task bodies can mutate later runtime state with `@set`, `@export`, and `@unset`.
+
+```yaml
+release:
+  @set MODE production
+  @export MODE
+  @task build
+
+build:
+  @if $MODE == production
+    cargo build --release
+  @else
+    cargo build
+```
+
+Runtime variable directives:
+
+- `@set NAME value` sets a CJTasks variable for later interpolation and directives, but does not export it to child processes.
+- `@export NAME` exports the current variable value to later child processes.
+- `@export NAME value` sets and exports a value in one step.
+- `@unset NAME` removes the variable and removes any later export overlay for that name.
+
+Runtime state is order-dependent and shared with composed tasks. Changes made inside a task called with `@task` remain visible after that task returns.
+
+## Conditionals and Switches
+
+Conditionals intentionally use a small expression set:
+
+```yaml
+install:
+  @if-exists package-lock.json
+    npm ci
+  @else
+    npm install
+
+build:
+  @if $MODE == production
+    npm run build
+  @else
+    npm run build:dev
+```
+
+Supported conditional forms:
+
+```text
+@if $VAR == value
+@if $VAR != value
+@if ${VAR} == value
+@if ${VAR} != value
+@if-exists path
+@if-missing path
+@if-set $VAR
+@if-unset $VAR
+@else
+```
+
+Paths in `@if-exists` and `@if-missing` are relative to the taskfile directory. String comparisons are literal after interpolation.
+
+Use `@switch`, `@case`, and `@default` for one-of-many branching:
+
+```yaml
+serve:
+  @switch $APP_KIND
+    @case node
+      npm run dev
+    @case rust
+      cargo run
+    @case python
+      python3 -m app
+    @default
+      echo unknown APP_KIND=$APP_KIND
+```
+
+`@case` values are literal strings. At most one case runs. A missing `@default` is allowed.
 
 ## Environment and .env Behavior
 
@@ -146,16 +308,17 @@ cargo run -- example_tasks/git-gibberish base
 
 Some example tasks intentionally require external tools or dependencies, such as `npm install`, `pipenv`, `PySide6`, Docker, or Cargo. See each example README for what can be run immediately and what is intentionally left as a realistic dependency-backed command.
 
-## Current MVP Limitations
+Existing example taskfiles were originally written against the shell-per-line MVP. Commands that use redirects, globbing, command chaining, quoted shell variables, or shell builtins should be converted to `@shell` or direct argv-safe interpolation when using the round 2 execution model.
+
+## Current Limitations
 
 - No command-line flags.
 - No task arguments after the task name.
 - No multiple-task invocation.
 - No parent-directory taskfile discovery.
-- No task dependencies or task composition.
 - No task-level environment blocks.
-- No shell configuration; Unix commands use `/bin/sh -c`.
+- No shell configuration; Unix `@shell` commands use `/bin/sh -c`.
 - No Windows shell strategy yet.
 - No general YAML parsing.
-- No variable expansion in `.env` or taskfile environment values.
+- No variable expansion in `.env` values.
 - No `.env.local` or parent `.env` discovery.
