@@ -1,0 +1,17 @@
+@env:
+  PORT?: 3000
+
+@help:
+  Project help.
+
+build (TARGET):
+  @desc build tasks
+  dev (MODE):
+    @desc build dev assets
+    npm run build
+
+help:
+  echo help
+
+env:
+  echo env

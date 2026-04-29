@@ -1,0 +1,46 @@
+{
+  "comments": {
+    "lineComment": "#"
+  },
+  "brackets": [
+    [
+      "{",
+      "}"
+    ],
+    [
+      "[",
+      "]"
+    ],
+    [
+      "(",
+      ")"
+    ]
+  ],
+  "autoClosingPairs": [
+    {
+      "open": "\"",
+      "close": "\""
+    },
+    {
+      "open": "'",
+      "close": "'"
+    },
+    {
+      "open": "${",
+      "close": "}"
+    }
+  ],
+  "surroundingPairs": [
+    {
+      "open": "\"",
+      "close": "\""
+    },
+    {
+      "open": "'",
+      "close": "'"
+    }
+  ],
+  "indentationRules": {
+    "increaseIndentPattern": "^\\s*(?:[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)*(?:[ \\t]+\\([A-Za-z_][A-Za-z0-9_]*(?:[ \\t]*,[ \\t]*[A-Za-z_][A-Za-z0-9_]*)*\\))?:|@help:|@(?!set\\s+(?:\\$\\{[A-Za-z_][A-Za-z0-9_]*(?:\\?[^}]*)?\\}|\\$[A-Za-z_][A-Za-z0-9_]*|[A-Za-z_][A-Za-z0-9_]*):)(?:await|watch|if|if-not|if-in|if-not-in|if-version|if-not-version|if-bumped|if-not-bumped|if-patch|if-not-patch|if-minor|if-not-minor|if-major|if-not-major|if-pre|if-not-pre|if-release|if-not-release|if-exists|if-not-exists|if-set|if-not-set|else|switch|case|default|and|or|return)\\b.*|@set\\s+(?:\\$\\{[A-Za-z_][A-Za-z0-9_]*(?:\\?[^}]*)?\\}|\\$[A-Za-z_][A-Za-z0-9_]*|[A-Za-z_][A-Za-z0-9_]*):)\\s*$"
+  }
+}

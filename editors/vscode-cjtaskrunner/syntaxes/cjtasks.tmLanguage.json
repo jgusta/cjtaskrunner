@@ -1,0 +1,316 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "CJTaskrunner",
+  "scopeName": "source.cjtasks",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#helpBlock"
+    },
+    {
+      "include": "#envBlock"
+    },
+    {
+      "include": "#taskDefinition"
+    },
+    {
+      "include": "#setDirective"
+    },
+    {
+      "include": "#descDirective"
+    },
+    {
+      "include": "#taskDirective"
+    },
+    {
+      "include": "#ordinaryDirective"
+    },
+    {
+      "include": "#taskLine"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.cjtasks",
+          "match": "(?:^\\s*|\\G)#.*$"
+        }
+      ]
+    },
+    "helpBlock": {
+      "patterns": [
+        {
+          "begin": "^(\\s*)(@help)(:)[ \\t]*$",
+          "beginCaptures": {
+            "2": {
+              "name": "keyword.control.directive.block.cjtasks"
+            },
+            "3": {
+              "name": "punctuation.separator.colon.cjtasks"
+            }
+          },
+          "while": "^(?:\\1[ \\t]+)(?=\\S)|^[ \\t]*$",
+          "contentName": "comment.block.documentation.cjtasks",
+          "patterns": [
+            {
+              "include": "#variables"
+            }
+          ]
+        }
+      ]
+    },
+    "envBlock": {
+      "patterns": [
+        {
+          "begin": "^(\\s*)(@env)(:)[ \\t]*$",
+          "beginCaptures": {
+            "2": {
+              "name": "keyword.control.directive.block.cjtasks"
+            },
+            "3": {
+              "name": "punctuation.separator.colon.cjtasks"
+            }
+          },
+          "while": "^(?:\\1[ \\t]+)(?=\\S)|^[ \\t]*$",
+          "patterns": [
+            {
+              "include": "#comments"
+            },
+            {
+              "include": "#envEntry"
+            }
+          ]
+        }
+      ]
+    },
+    "envEntry": {
+      "patterns": [
+        {
+          "begin": "\\G([A-Za-z_][A-Za-z0-9_]*)(\\??:)[ \\t]*",
+          "beginCaptures": {
+            "1": {
+              "name": "variable.other.cjtasks"
+            },
+            "2": {
+              "name": "punctuation.separator.colon.cjtasks"
+            }
+          },
+          "end": "$",
+          "contentName": "meta.task-line.cjtasks",
+          "patterns": [
+            {
+              "include": "#strings"
+            },
+            {
+              "include": "#variables"
+            }
+          ]
+        }
+      ]
+    },
+    "taskDefinition": {
+      "patterns": [
+        {
+          "begin": "^\\s*(?=[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)*(?:[ \\t]+\\([A-Za-z_][A-Za-z0-9_]*(?:[ \\t]*,[ \\t]*[A-Za-z_][A-Za-z0-9_]*)*\\))?:[ \\t]*$)",
+          "end": "$",
+          "patterns": [
+            {
+              "include": "#taskArguments"
+            },
+            {
+              "name": "entity.name.function.task.cjtasks",
+              "match": "[A-Za-z0-9_-]+"
+            },
+            {
+              "name": "punctuation.separator.colon.cjtasks",
+              "match": ":"
+            }
+          ]
+        }
+      ]
+    },
+    "taskArguments": {
+      "patterns": [
+        {
+          "begin": "(\\()",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.section.parens.begin.cjtasks"
+            }
+          },
+          "end": "(\\))",
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.section.parens.end.cjtasks"
+            }
+          },
+          "patterns": [
+            {
+              "name": "variable.other.cjtasks",
+              "match": "[A-Za-z_][A-Za-z0-9_]*"
+            },
+            {
+              "name": "punctuation.separator.comma.cjtasks",
+              "match": ","
+            }
+          ]
+        }
+      ]
+    },
+    "setDirective": {
+      "patterns": [
+        {
+          "match": "^(\\s*)(@set)\\b[ \\t]+(\\$\\{[A-Za-z_][A-Za-z0-9_]*(?:\\?[^}]*)?\\}|\\$[A-Za-z_][A-Za-z0-9_]*|[A-Za-z_][A-Za-z0-9_]*)(:)[ \\t]*$",
+          "captures": {
+            "2": {
+              "name": "keyword.control.directive.block.cjtasks"
+            },
+            "3": {
+              "name": "variable.other.cjtasks"
+            },
+            "4": {
+              "name": "punctuation.separator.colon.cjtasks"
+            }
+          }
+        }
+      ]
+    },
+    "descDirective": {
+      "patterns": [
+        {
+          "begin": "(^\\s*|;[ \\t]*)(@desc)(?=[ \\t;]|$)[ \\t]*",
+          "beginCaptures": {
+            "2": {
+              "name": "keyword.control.directive.cjtasks"
+            }
+          },
+          "end": "(?<!\\\\)(?:\\\\\\\\)*\\K(?=;)|$",
+          "contentName": "comment.block.documentation.cjtasks",
+          "patterns": [
+            {
+              "include": "#variables"
+            }
+          ]
+        }
+      ]
+    },
+    "taskDirective": {
+      "patterns": [
+        {
+          "begin": "(^\\s*|;[ \\t]*)(@task)(?=[ \\t;]|$)[ \\t]*",
+          "beginCaptures": {
+            "2": {
+              "name": "keyword.control.directive.cjtasks"
+            }
+          },
+          "end": "(?<!\\\\)(?:\\\\\\\\)*\\K(?=;)|$",
+          "patterns": [
+            {
+              "include": "#strings"
+            },
+            {
+              "include": "#variables"
+            },
+            {
+              "name": "entity.name.function.task.cjtasks",
+              "match": "[A-Za-z0-9_-]+"
+            },
+            {
+              "name": "punctuation.separator.colon.cjtasks",
+              "match": ":"
+            }
+          ]
+        }
+      ]
+    },
+    "ordinaryDirective": {
+      "patterns": [
+        {
+          "begin": "(^\\s*|;[ \\t]*)(@[A-Za-z][A-Za-z0-9-]*)(?=[ \\t;]|$)[ \\t]*",
+          "beginCaptures": {
+            "2": {
+              "name": "keyword.control.directive.cjtasks"
+            }
+          },
+          "end": "(?<!\\\\)(?:\\\\\\\\)*\\K(?=;)|$",
+          "contentName": "meta.task-line.cjtasks",
+          "patterns": [
+            {
+              "include": "#strings"
+            },
+            {
+              "include": "#variables"
+            }
+          ]
+        }
+      ]
+    },
+    "taskLine": {
+      "patterns": [
+        {
+          "begin": "^\\s*(?=\\S)",
+          "end": "$",
+          "contentName": "meta.task-line.cjtasks",
+          "patterns": [
+            {
+              "include": "#strings"
+            },
+            {
+              "include": "#variables"
+            },
+            {
+              "match": "\\\\."
+            },
+            {
+              "include": "#descDirective"
+            },
+            {
+              "include": "#taskDirective"
+            },
+            {
+              "include": "#ordinaryDirective"
+            }
+          ]
+        }
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {
+          "name": "variable.other.cjtasks",
+          "match": "(?<!\\\\)(?:\\$\\{[A-Za-z_][A-Za-z0-9_]*(?:\\?[^}]*)?\\}|\\$[A-Za-z_][A-Za-z0-9_]*)"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.cjtasks",
+          "begin": "\"",
+          "end": "\"|$",
+          "patterns": [
+            {
+              "match": "\\\\."
+            },
+            {
+              "include": "#variables"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.cjtasks",
+          "begin": "'",
+          "end": "'|$",
+          "patterns": [
+            {
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

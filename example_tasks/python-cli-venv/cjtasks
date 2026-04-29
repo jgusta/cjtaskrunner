@@ -1,0 +1,50 @@
+@env:
+  PYTHONPATH: src
+  CLI_MODE?: dryrun
+
+@help:
+  Python CLI tasks demonstrating explicit venv selection, task arguments,
+  @if membership checks, exports, and filesystem packaging directives.
+
+check:
+  @desc run safe CLI checks
+  @task pathcheck
+  @await package
+    @echo CLI checks passed
+  @or
+    @echo CLI checks failed
+    @stop
+
+pathcheck:
+  @desc print Python, venv, and PATH details
+  @set PYTHON:
+    python3 -c 'import sys; print(sys.executable)'
+  @echo python=$PYTHON
+  @shell printf 'venv=%s\npath0=%s\n' "\${VIRTUAL_ENV:-none}" "\${PATH%%:*}"
+
+makevenv:
+  @desc create .venv when absent
+  @if-not-exists .venv
+    python3 -m venv .venv
+  @else
+    @echo .venv already exists
+
+run (MODE):
+  @desc run the CLI in dryrun or live mode
+  @if-not-in $MODE dryrun live
+    @stop CLI mode must be dryrun or live
+  @export CLI_MODE $MODE
+  python3 -m local_cli
+
+package:
+  @desc copy CLI source into build/cli
+  @clean build
+  @mkdir build/cli
+  @cp pyproject.toml build/cli
+  @cpdir src build/cli/src
+  python3 -m compileall src
+
+clean:
+  @desc remove generated CLI bytecode and build output
+  @clean build
+  @shell find src -name __pycache__ -type d -prune -exec rm -rf {} +

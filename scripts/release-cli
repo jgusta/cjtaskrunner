@@ -1,0 +1,175 @@
+#!/bin/sh
+set -eu
+
+die() {
+    printf 'release: %s\n' "$*" >&2
+    exit 1
+}
+
+require_version() {
+    [ "$#" -eq 1 ] && [ -n "$1" ] || die "expected a version argument"
+}
+
+taskfile_version() {
+    sed -n 's/^@version cli //p' cjtasks
+}
+
+cargo_toml_version() {
+    awk '
+        /^\[package\]$/ { in_package = 1; next }
+        /^\[/ && in_package { exit }
+        in_package && /^version[[:space:]]*=/ {
+            value = $0
+            sub(/^[^"]*"/, "", value)
+            sub(/".*$/, "", value)
+            print value
+            exit
+        }
+    ' Cargo.toml
+}
+
+cargo_lock_version() {
+    awk '
+        /^\[\[package\]\]$/ { package_match = 0; next }
+        /^name = "cjtaskrunner"$/ { package_match = 1; next }
+        package_match && /^version = / {
+            value = $0
+            sub(/^[^"]*"/, "", value)
+            sub(/".*$/, "", value)
+            print value
+            exit
+        }
+    ' Cargo.lock
+}
+
+require_clean() {
+    [ -z "$(git status --porcelain)" ] || die "working tree must be clean"
+}
+
+require_main() {
+    branch=$(git branch --show-current)
+    [ "$branch" = "main" ] || die "release must be run from main (current branch: ${branch:-detached})"
+}
+
+fetch_origin() {
+    git fetch origin main --tags
+}
+
+require_origin_ancestor() {
+    git merge-base --is-ancestor origin/main HEAD ||
+        die "local main does not contain the latest origin/main"
+}
+
+verify_versions() {
+    expected=$1
+    taskfile=$(taskfile_version)
+    cargo_toml=$(cargo_toml_version)
+    cargo_lock=$(cargo_lock_version)
+
+    [ "$taskfile" = "$expected" ] ||
+        die "cjtasks version is ${taskfile:-missing}, expected $expected"
+    [ "$cargo_toml" = "$expected" ] ||
+        die "Cargo.toml version is ${cargo_toml:-missing}, expected $expected"
+    [ "$cargo_lock" = "$expected" ] ||
+        die "Cargo.lock version is ${cargo_lock:-missing}, expected $expected"
+}
+
+require_new_tag() {
+    tag=$1
+    if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+        die "tag $tag already exists"
+    fi
+}
+
+require_release_tag_at_head() {
+    tag=$1
+    git rev-parse -q --verify "refs/tags/$tag" >/dev/null ||
+        die "tag $tag does not exist"
+    [ "$(git cat-file -t "refs/tags/$tag")" = "tag" ] ||
+        die "tag $tag must be annotated"
+    [ "$(git rev-parse "refs/tags/$tag^{}")" = "$(git rev-parse HEAD)" ] ||
+        die "tag $tag does not point to HEAD"
+}
+
+require_only_version_changes() {
+    unexpected=$(git status --porcelain | awk '
+        {
+            path = substr($0, 4)
+            if (path != "cjtasks" && path != "Cargo.toml" && path != "Cargo.lock") {
+                print path
+            }
+        }
+    ')
+    [ -z "$unexpected" ] ||
+        die "release preparation changed unexpected files: $unexpected"
+}
+
+preflight() {
+    require_clean
+    require_main
+    fetch_origin
+    [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] ||
+        die "local main must exactly match origin/main before preparing a release"
+    cargo set-version --help >/dev/null 2>&1 ||
+        die "cargo set-version is unavailable; install cargo-edit with: cargo install cargo-edit"
+}
+
+commit_tag() {
+    require_version "$@"
+    version=$1
+    tag="v$version"
+
+    verify_versions "$version"
+    require_new_tag "$tag"
+    require_only_version_changes
+    [ -z "$(git diff --cached --name-only)" ] ||
+        die "index must be empty before creating the release commit"
+
+    git add cjtasks Cargo.toml Cargo.lock
+    git diff --cached --quiet &&
+        die "version files contain no changes for $tag"
+    git commit -m "Release $tag"
+    git tag -a "$tag" -m "CJTaskrunner $tag"
+}
+
+publish() {
+    require_version "$@"
+    version=$1
+    tag="v$version"
+
+    require_clean
+    require_main
+    fetch_origin
+    require_origin_ancestor
+    verify_versions "$version"
+    require_release_tag_at_head "$tag"
+    if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+        die "tag $tag already exists on origin"
+    fi
+
+    git push --atomic origin main "$tag"
+}
+
+case "${1:-}" in
+    preflight)
+        shift
+        [ "$#" -eq 0 ] || die "preflight takes no arguments"
+        preflight
+        ;;
+    verify)
+        shift
+        require_version "$@"
+        verify_versions "$1"
+        ;;
+    commit-tag)
+        shift
+        commit_tag "$@"
+        ;;
+    publish)
+        shift
+        publish "$@"
+        ;;
+    *)
+        die "usage: scripts/release-cli <preflight|verify|commit-tag|publish> [version]"
+        ;;
+esac

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16px" height="16px" xmlns:bx="https://boxy-svg.com">
+  <defs>
+    <linearGradient id="color-3" gradientUnits="userSpaceOnUse" gradientTransform="matrix(0.006902, 0, 0, 0.006902, -2.835625, 1.703271)">
+      <title>JFill</title>
+      <stop style="stop-color: rgb(0, 0, 0);"/>
+    </linearGradient>
+    <linearGradient id="color-2" gradientUnits="userSpaceOnUse" gradientTransform="matrix(0.006902, 0, 0, 0.006902, -2.835625, 1.703271)">
+      <title>JStroke</title>
+      <stop style="stop-color: rgb(0, 0, 0);"/>
+    </linearGradient>
+    <linearGradient id="color-7" gradientUnits="userSpaceOnUse" gradientTransform="matrix(0.006902, 0, 0, 0.006902, -2.835674, 0.974299)">
+      <title>CStroke</title>
+      <stop style="stop-color: rgb(0, 0, 0);"/>
+    </linearGradient>
+    <bx:grid x="0" y="0.044" width="1" height="1" divisions="1"/>
+    <bx:guide x="7.01" y="6.649" angle="0"/>
+  </defs>
+  <path d="M 5.448 6.779 L 6.491 6.793 C 6.491 6.793 6.489 10.409 6.491 11.738 C 6.492 12.995 5.727 13.557 4.807 13.557 C 3.939 13.557 2.466 13.557 2.466 13.557 L 2.474 12.433 C 2.474 12.433 4.176 12.433 4.807 12.433 C 5.038 12.433 5.472 12.464 5.448 11.441 C 5.422 10.319 5.448 6.779 5.448 6.779 Z" style="filter: none; stroke: url(&quot;#color-2&quot;); stroke-width: 0px; fill: url(&quot;#color-3&quot;);" id="object-4">
+    <title>J</title>
+  </path>
+  <path d="M 6.491 6.112 C 6.491 6.112 3.235 6.112 2.573 6.112 C 1.861 6.112 1.746 6.696 1.746 7.194 C 1.746 7.65 1.746 8.396 1.746 8.857 C 1.746 9.559 1.746 9.956 2.573 9.956 C 3.185 9.956 4.371 9.972 4.85 9.956 C 4.85 10.546 4.85 11.133 4.145 11.133 C 3.284 11.133 3.052 11.128 2.573 11.133 C 1.363 11.15 0.631 10.48 0.631 8.975 C 0.631 8.243 0.631 7.853 0.631 7.194 C 0.631 6.002 1.363 5.044 2.573 5.044 C 3.175 5.044 6.491 5.044 6.491 5.044 L 6.491 6.112 Z" style="filter: none; stroke: url(&quot;#color-7&quot;); stroke-width: 0px; fill: url(&quot;#color-3&quot;);" id="object-6">
+    <title>C</title>
+  </path>
+  <ellipse style="stroke: rgb(0, 0, 0); stroke-width: 0px; fill: url(&quot;#color-3&quot;);" cx="8.312" cy="8.228" rx="0.816" ry="0.816"/>
+  <ellipse style="stroke: rgb(0, 0, 0); stroke-width: 0px; fill: url(&quot;#color-3&quot;);" cx="8.312" cy="11.611" rx="0.816" ry="0.816"/>
+  <path d="M 9.066 1 C 9.464 1 9.846 1.158 10.127 1.439 L 13.041 4.353 C 13.322 4.635 13.48 5.016 13.48 5.414 L 13.48 13 C 13.48 14.104 12.585 15 11.48 15 L 6.802 15 L 6.802 14.999 L 4.469 14.999 C 3.917 14.999 3.456 14.681 3.479 14 C 4.044 14 6.014 14 7.544 14 L 11.48 14 C 12.033 14 12.48 13.552 12.48 13 L 12.48 6 L 9.98 6 C 9.152 6 8.48 5.328 8.48 4.5 L 8.48 2 L 5.48 2 C 4.928 2 4.48 2.447 4.48 3 L 4.48 4.544 L 3.48 4.544 L 3.48 3 C 3.48 1.895 4.376 1 5.48 1 Z M 9.48 2.207 L 9.48 4.5 C 9.48 4.776 9.704 5 9.98 5 L 12.273 5 Z" style="stroke-width: 1; fill: url(&quot;#color-3&quot;);"/>
+</svg>

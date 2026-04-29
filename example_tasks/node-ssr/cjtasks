@@ -1,0 +1,85 @@
+@env:
+  NODE_ENV: production
+  SSR_PORT?: 3000
+  SSR_HOST?: 127.0.0.1
+
+@version site 0.1.0
+
+@help:
+  Minimal Node SSR tasks demonstrating @set capture, task arguments, @switch,
+  filesystem directives, browser opening, and version conditionals.
+
+check:
+  @desc run safe SSR checks and render static output
+  @task summary
+  @await _files
+    @task build production
+  @or
+    @echo SSR checks failed
+    @stop
+
+summary:
+  @desc print captured SSR environment summary
+  @set SUMMARY:
+    @shell printf 'node=%s host=%s port=%s' "$NODE_ENV" "$SSR_HOST" "$SSR_PORT"
+  @echo $SUMMARY
+
+_files:
+  @desc verify SSR project files
+  @if-not-exists package.json
+    @stop missing package.json
+  @if-not-exists src/server.js
+    @stop missing src/server.js
+  @if-not-exists src/render.js
+    @stop missing src/render.js
+  @success
+
+mode (MODE):
+  @desc select development or production runtime mode
+  @switch $MODE
+    @case development
+      @export NODE_ENV development
+    @case production
+      @export NODE_ENV production
+    @default
+      @stop unsupported SSR mode: $MODE
+  @echo NODE_ENV=$NODE_ENV
+
+start (MODE):
+  @desc start the SSR server in a supported mode
+  @task _files
+  @task mode $MODE
+  node src/server.js
+
+server:
+  @desc server helpers
+  open:
+    @desc open the local SSR URL
+    @set SSR_URL http://$SSR_HOST:$SSR_PORT
+    @open $SSR_URL
+
+build (MODE):
+  @desc render static HTML for a supported mode
+  @task _files
+  @task mode $MODE
+  @clean dist
+  @mkdir dist
+  @shell node src/render.js > dist/index.html
+  @if-exists dist/index.html
+    @echo rendered dist/index.html
+
+clean:
+  @desc remove generated SSR output
+  @clean dist
+
+version:
+  @desc show the taskfile site version
+  @if-version site >= 0.1.0
+    @echo site version $VERSION_SITE
+
+release:
+  @desc bump the example site patch version after a build
+  @task build production
+  @patch site
+  @if-patch site
+    @echo bumped site to $VERSION_SITE

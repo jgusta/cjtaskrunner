@@ -1,0 +1,64 @@
+@env:
+  PIPENV_VENV_IN_PROJECT?: 1
+  PYTHONPATH: app
+
+@help:
+  Pipenv tasks demonstrating hidden prerequisites, explicit environment
+  exports, ordered composition, and a safe check path that does not install.
+
+check:
+  @desc run dependency-free Pipenv example checks
+  @await envcheck _files
+    @echo pipenv checks passed
+  @or
+    @echo pipenv checks failed
+    @stop
+
+envcheck:
+  @desc print Pipenv-related environment
+  @echo PIPENV_VENV_IN_PROJECT=$PIPENV_VENV_IN_PROJECT
+  @echo PIPENV_EXAMPLE_MESSAGE=$PIPENV_EXAMPLE_MESSAGE
+  @echo PYTHONPATH=$PYTHONPATH
+
+_files:
+  @desc verify Pipenv example files
+  @if-not-exists Pipfile
+    @stop missing Pipfile
+  @if-not-exists app/pipenv_app.py
+    @stop missing app/pipenv_app.py
+  @if-not-exists tests/test_pipenv_app.py
+    @stop missing tests/test_pipenv_app.py
+  @success
+
+_pipenv:
+  @desc verify pipenv is installed
+  @shell command -v pipenv >/dev/null
+  @or
+    @stop pipenv is required for this task
+
+install:
+  @desc install Pipenv dependencies
+  @task _files
+  @task _pipenv
+  pipenv install --dev
+
+run (MESSAGE):
+  @desc run the Pipenv app with an exported message
+  @task _pipenv
+  @export PIPENV_EXAMPLE_MESSAGE $MESSAGE
+  pipenv run python -m pipenv_app
+
+test:
+  @desc run Pipenv tests
+  @task _pipenv
+  pipenv run python -m unittest discover -s tests
+
+where:
+  @desc print Pipenv virtualenv path
+  @task _pipenv
+  pipenv --venv
+
+ci:
+  @desc install and test through Pipenv
+  @task install
+  @task test

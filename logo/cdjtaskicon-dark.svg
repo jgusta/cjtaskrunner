@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16px" height="16px" xmlns:bx="https://boxy-svg.com">
+  <defs>
+    <linearGradient id="color-8" gradientUnits="userSpaceOnUse" gradientTransform="matrix(0.013583, 0, 0, 0.017444, -13.169735, -9.596557)">
+      <title>ArrowStroke</title>
+      <stop style="stop-color: rgb(0, 0, 0);"/>
+    </linearGradient>
+    <bx:grid x="0" y="0.044" width="1" height="1" divisions="1"/>
+    <bx:guide x="7.01" y="6.649" angle="0"/>
+  </defs>
+  <path d="M 4 1.5 L 12 1.5 C 12.654 1.522 13.343 1.807 13.768 2.232 C 14.193 2.657 14.478 3.345 14.5 4 L 14.5 7.502 L 13.5 7.502 L 13.5 4 C 13.522 3.55 13.36 3.238 13.061 2.939 C 12.762 2.64 12.45 2.478 12 2.5 L 4 2.5 C 3.55 2.478 3.238 2.64 2.939 2.939 C 2.64 3.238 2.478 3.55 2.5 4 L 2.5 11.97 C 2.478 12.42 2.64 12.732 2.939 13.031 C 3.238 13.33 3.55 13.492 4 13.47 L 7.391 13.47 L 7.391 14.47 L 4 14.47 C 3.346 14.448 2.657 14.163 2.232 13.738 C 1.807 13.313 1.522 12.625 1.5 11.97 L 1.5 4 C 1.522 3.346 1.807 2.657 2.232 2.232 C 2.657 1.807 3.345 1.522 4 1.5 Z" style="fill: rgb(255, 255, 255); fill-rule: evenodd;"/>
+  <path d="M 15.219 10.34 L 9.596 15.635 L 9.596 13.466 L 9.91 13.015 C 9.757 13.015 7.943 13.015 7.943 13.015 L 7.129 11.86 L 11.044 11.86 L 12.036 10.994 L 6.78 10.994 L 6.78 9.578 L 12.048 9.578 L 11.023 8.783 L 7.129 8.783 L 7.943 7.645 L 9.903 7.645 L 9.596 7.232 L 9.596 5.044 L 15.219 10.34 Z" style="filter: none; stroke: url(&quot;#color-8&quot;); stroke-width: 0px; fill: rgb(255, 255, 255);">
+    <title>Arrow</title>
+  </path>
+</svg>

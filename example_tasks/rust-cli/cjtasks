@@ -1,0 +1,79 @@
+@env:
+  CARGO_TERM_COLOR?: always
+  APP_GREETING?: hello
+
+@version app 0.1.0
+
+@help:
+  Rust CLI tasks demonstrating task arguments, @switch, parallel checks,
+  version conditionals, and guarded version bumps.
+
+check:
+  @desc run cargo check
+  @task _files
+  cargo check
+
+_files:
+  @desc verify Rust project files
+  @if-not-exists Cargo.toml
+    @stop missing Cargo.toml
+  @if-not-exists src/main.rs
+    @stop missing src/main.rs
+  @success
+
+envcheck:
+  @desc print Rust example environment
+  @echo CARGO_TERM_COLOR=$CARGO_TERM_COLOR
+  @echo APP_GREETING=$APP_GREETING
+  @echo RUST_LOG=$RUST_LOG
+
+build (PROFILE):
+  @desc build debug or release profile
+  @task _files
+  @switch $PROFILE
+    @case debug
+      cargo build
+    @case release
+      cargo build --release
+    @default
+      @stop build profile must be debug or release
+
+run (GREETING):
+  @desc run the CLI with an exported greeting
+  @task _files
+  @export APP_GREETING $GREETING
+  cargo run
+
+test:
+  @desc run cargo tests
+  @task _files
+  cargo test
+
+ci:
+  @desc run independent Rust checks in parallel
+  @await envcheck check test
+    @echo rust checks passed
+  @or
+    @echo rust checks failed
+    @stop
+
+version:
+  @desc print the taskfile app version
+  @if-version app >= 0.1.0
+    @echo app version $VERSION_APP
+
+release (LEVEL):
+  @desc bump app version with patch, minor, or major and build release
+  @if-not-in $LEVEL patch minor major
+    @stop release level must be patch, minor, or major
+  @task ci
+  @switch $LEVEL
+    @case patch
+      @patch app
+    @case minor
+      @minor app
+    @case major
+      @major app
+  @if-bumped app
+    @echo bumped app to $VERSION_APP
+  @task build release

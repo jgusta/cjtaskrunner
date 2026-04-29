@@ -1,0 +1,18 @@
+[package]
+name = "cjtaskrunner"
+version = "0.1.0"
+edition = "2021"
+default-run = "cj"
+license = "MIT"
+authors = ["jgusta"]
+homepage = "https://github.com/jgusta"
+repository = "https://github.com/jgusta/cjtaskrunner"
+
+[dependencies]
+ctrlc = "3.5.1"
+libc = "0.2"
+notify = "8.2.0"
+serde_json = "1"
+shlex = "1.3.0"
+tokio = { version = "1.48.0", features = ["full"] }
+tower-lsp = "0.20.0"

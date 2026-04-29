@@ -1,0 +1,190 @@
+{
+  "name": "cjtaskrunner-vscode",
+  "displayName": "CJTaskrunner Tasks",
+  "description": "Taskfile language support and task runner view for CJTaskrunner.",
+  "version": "0.0.1",
+  "publisher": "cjtaskrunner",
+  "private": false,
+  "license": "MIT",
+  "author": {
+    "name": "jgusta",
+    "url": "https://github.com/jgusta"
+  },
+  "homepage": "https://github.com/jgusta/cjtaskrunner/tree/main/editors/vscode-cjtaskrunner",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jgusta/cjtaskrunner.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:cjtasks",
+    "workspaceContains:production.cjtasks",
+    "workspaceContains:staging.cjtasks",
+    "workspaceContains:development.cjtasks",
+    "workspaceContains:local.cjtasks"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "cjtasks",
+        "aliases": [
+          "cjtasks",
+          "CJTaskrunner"
+        ],
+        "filenames": [
+          "cjtasks",
+          "production.cjtasks",
+          "staging.cjtasks",
+          "development.cjtasks",
+          "local.cjtasks"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "cjtasks",
+        "scopeName": "source.cjtasks",
+        "path": "./syntaxes/cjtasks.tmLanguage.json"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "cjtaskrunner.tasks",
+          "name": "CJTASKS",
+          "when": "cjtaskrunner.hasRootTaskfile"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "cjtaskrunner.refreshTasks",
+        "title": "Refresh Tasks",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "cjtaskrunner.runTask",
+        "title": "Run Task",
+        "icon": "$(play)"
+      },
+      {
+        "command": "cjtaskrunner.openTask",
+        "title": "Open Task Definition"
+      },
+      {
+        "command": "cjtaskrunner.restartLanguageServer",
+        "title": "CJTaskrunner: Restart Language Server"
+      },
+      {
+        "command": "cjtaskrunner.languageServerStatus",
+        "title": "CJTaskrunner: Language Server Status"
+      },
+      {
+        "command": "cjtaskrunner.showLanguageServerOutput",
+        "title": "CJTaskrunner: Show Language Server Output"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "cjtaskrunner.refreshTasks",
+          "when": "view == cjtaskrunner.tasks",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "cjtaskrunner.runTask",
+          "when": "view == cjtaskrunner.tasks && viewItem == cjtaskrunner.task",
+          "group": "inline"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CJTaskrunner",
+      "properties": {
+        "cjtaskrunner.path": {
+          "type": "string",
+          "scope": "resource",
+          "default": "",
+          "description": "Path to the cj executable. Empty uses cj from PATH. Relative paths resolve from the first workspace folder."
+        },
+        "cjtaskrunner.lsp.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Trace communication with the CJTaskrunner language server."
+        },
+        "cjtaskrunner.showTaskfileCascade": {
+          "type": "boolean",
+          "scope": "resource",
+          "default": false,
+          "description": "Show the taskfile cascade in the CJTASKS panel."
+        },
+        "cjtaskrunner.showOverriddenTasksInCascade": {
+          "type": "boolean",
+          "scope": "resource",
+          "default": false,
+          "description": "Show overridden tasks as disabled entries in the taskfile cascade."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./ && esbuild src/extension.ts src/languageServer.ts --bundle --platform=node --format=cjs --external:vscode --external:./languageServer.js --outdir=out --sourcemap",
+    "watch": "esbuild src/extension.ts src/languageServer.ts --bundle --platform=node --format=cjs --external:vscode --external:./languageServer.js --outdir=out --sourcemap --watch",
+    "vscode:prepublish": "npm run compile",
+    "test:outline": "npm run compile && node test/taskOutline.test.js && node test/taskfileDiscovery.test.js && node test/languageServerSupport.test.js && node test/activation.test.js && node test/packaging.test.js",
+    "test:grammar": "node test/grammar.test.js && node test/docsHighlighter.test.js",
+    "test": "npm run test:outline && npm run test:grammar",
+    "package": "npx @vscode/vsce package",
+    "publish:vsce": "npx @vscode/vsce publish",
+    "package:ci": "npm run compile && vsce package",
+    "publish:dry-run": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.9.1",
+    "esbuild": "^0.25.5",
+    "typescript": "^5.4.5",
+    "vscode-languageclient": "^9.0.1",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.3.2"
+  },
+  "bugs": {
+    "url": "https://github.com/jgusta/cjtaskrunner/issues"
+  },
+  "keywords": [
+    "cjtasks",
+    "task-runner",
+    "build-tool",
+    "language-support"
+  ],
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#111827",
+    "theme": "dark"
+  },
+  "preview": false,
+  "qna": "https://github.com/jgusta/cjtaskrunner/discussions",
+  "badges": [
+    {
+      "url": "https://img.shields.io/badge/cjtaskrunner-vscode-6366f1",
+      "href": "https://github.com/jgusta/cjtaskrunner/tree/main/editors/vscode-cjtaskrunner",
+      "description": "Project home"
+    }
+  ]
+}

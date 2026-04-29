@@ -1,0 +1,72 @@
+@env:
+  PYTHONPATH: src
+  APP_ENV?: development
+
+@help:
+  Python package tasks demonstrating venv discovery, task arguments, runtime
+  exports, filesystem directives, and awaited tests.
+
+check:
+  @desc print Python info and await tests
+  @task pyinfo
+  @await test
+    @echo python checks passed
+  @or
+    @echo python checks failed
+    @stop
+
+pyinfo:
+  @desc print Python executable and venv state
+  @set PYTHON:
+    python3 -c 'import sys; print(sys.executable)'
+  @echo python=$PYTHON
+  @shell printf 'venv=%s\n' "\${VIRTUAL_ENV:-none}"
+
+_files:
+  @desc verify package files
+  @if-not-exists pyproject.toml
+    @stop missing pyproject.toml
+  @if-not-exists src/demo_app/__main__.py
+    @stop missing src/demo_app/__main__.py
+  @success
+
+makevenv:
+  @desc create .venv when absent
+  @if-not-exists .venv
+    python3 -m venv .venv
+  @else
+    @echo .venv already exists
+
+install (MODE):
+  @desc install package in editable or normal mode
+  @if-not-in $MODE editable normal
+    @stop install mode must be editable or normal
+  @task _files
+  @switch $MODE
+    @case editable
+      python3 -m pip install -e .
+    @case normal
+      python3 -m pip install .
+
+run (MESSAGE):
+  @desc run the demo module with an exported message
+  @task _files
+  @export APP_MESSAGE $MESSAGE
+  python3 -m demo_app
+
+test:
+  @desc run unit tests
+  @task _files
+  python3 -m unittest discover -s tests
+
+package:
+  @desc copy source into build/package with filesystem directives
+  @task _files
+  @clean build
+  @mkdir build/package
+  @cp pyproject.toml build/package
+  @cpdir src build/package/src
+
+clean:
+  @desc remove generated Python example output
+  @clean build

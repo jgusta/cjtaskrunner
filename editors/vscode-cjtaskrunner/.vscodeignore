@@ -1,0 +1,17 @@
+.vscode/**
+.vscode-test/**
+node_modules/**
+src/**
+test/**
+bin/**
+tsconfig.json
+package-lock.json
+pnpm-lock.yaml
+MARKETPLACE_PREP.md
+RELEASE.md
+**/*.map
+**/*.ts
+out/documentSymbols.js
+out/extensionConfiguration.js
+out/languageServerSupport.js
+out/taskOutline.js

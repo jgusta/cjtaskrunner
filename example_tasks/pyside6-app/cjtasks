@@ -1,0 +1,63 @@
+@env:
+  PYTHONPATH: app
+  QT_QPA_PLATFORM?: offscreen
+
+@help:
+  PySide6 tasks demonstrating GUI-friendly environment defaults, task
+  arguments, exports, and parallel dependency-free checks.
+
+check:
+  @desc run dependency-free PySide6 checks
+  @task pyinfo
+  @await _files
+    @echo PySide6 checks passed
+  @or
+    @echo PySide6 checks failed
+    @stop
+
+pyinfo:
+  @desc print Python, venv, and Qt platform
+  @set PYTHON:
+    python3 -c 'import sys; print(sys.executable)'
+  @echo python=$PYTHON
+  @echo QT_QPA_PLATFORM=$QT_QPA_PLATFORM
+  @shell printf 'venv=%s\n' "\${VIRTUAL_ENV:-none}"
+
+_files:
+  @desc verify PySide6 example files
+  @if-not-exists app/simple_window.py
+    @stop missing app/simple_window.py
+  @if-not-exists README.md
+    @stop missing README.md
+  @success
+
+makevenv:
+  @desc create .venv when absent
+  @if-not-exists .venv
+    python3 -m venv .venv
+  @else
+    @echo .venv already exists
+
+install:
+  @desc install PySide6
+  @task _files
+  python3 -m pip install PySide6
+
+platform (NAME):
+  @desc select offscreen, cocoa, xcb, or windows Qt platform
+  @if-not-in $NAME offscreen cocoa xcb windows
+    @stop unsupported Qt platform: $NAME
+  @export QT_QPA_PLATFORM $NAME
+  @echo QT_QPA_PLATFORM=$QT_QPA_PLATFORM
+
+run (PLATFORM):
+  @desc run the GUI app with a selected Qt platform
+  @task _files
+  @task platform $PLATFORM
+  python3 -m simple_window
+
+smoke (TITLE):
+  @desc import app code and print an exported window title
+  @task _files
+  @export PYSIDE_WINDOW_TITLE $TITLE
+  python3 -c 'import simple_window; print(simple_window.window_title())'

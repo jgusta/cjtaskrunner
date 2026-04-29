@@ -1,0 +1,179 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: editors/vscode-cjtaskrunner/package-lock.json
+
+      - name: Install VS Code extension dependencies
+        working-directory: editors/vscode-cjtaskrunner
+        run: npm ci
+
+      - name: Test VS Code extension
+        working-directory: editors/vscode-cjtaskrunner
+        run: npm test
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Validate CLI release tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          taskfile_version="$(sed -n 's/^@version cli //p' cjtasks)"
+          cargo_version="$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "cjtaskrunner") | .version')"
+
+          test "$version" = "$taskfile_version"
+          test "$version" = "$cargo_version"
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Run tests
+        run: cargo test --locked
+
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features --locked -- -D warnings
+
+  artifacts:
+    name: Artifact (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            archive: tar.gz
+          - name: macos-x86_64
+            os: macos-15-intel
+            target: x86_64-apple-darwin
+            archive: tar.gz
+          - name: macos-aarch64
+            os: macos-15
+            target: aarch64-apple-darwin
+            archive: tar.gz
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build release binary
+        run: cargo build --release --locked --bin cj --target ${{ matrix.target }}
+
+      - name: Package artifact
+        shell: pwsh
+        run: |
+          $name = "cjtaskrunner-${{ matrix.name }}"
+          $stage = "dist/$name"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+
+          $exe = ""
+          if ($env:RUNNER_OS -eq "Windows") {
+            $exe = ".exe"
+          }
+
+          Copy-Item "target/${{ matrix.target }}/release/cj$exe" "$stage/"
+          Copy-Item "README.md" "$stage/"
+          if (Test-Path "LICENSE") {
+            Copy-Item "LICENSE" "$stage/"
+          }
+
+          if ("${{ matrix.archive }}" -eq "zip") {
+            Compress-Archive -Path "$stage/*" -DestinationPath "dist/$name.zip" -Force
+          } else {
+            tar -czf "dist/$name.tar.gz" -C "dist" "$name"
+          }
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: cjtaskrunner-${{ matrix.name }}
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+          if-no-files-found: error
+
+  release:
+    name: GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: artifacts
+    permissions:
+      contents: write
+    steps:
+      - name: Download platform archives
+        uses: actions/download-artifact@v8
+        with:
+          pattern: cjtaskrunner-*
+          path: release
+          merge-multiple: true
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd release
+          shopt -s nullglob
+          archives=(*.tar.gz *.zip)
+          test "${#archives[@]}" -gt 0
+          sha256sum "${archives[@]}" > SHA256SUMS
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          assets=(release/*.tar.gz release/*.zip release/SHA256SUMS)
+          test "${#assets[@]}" -gt 1
+
+          gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
+            --verify-tag \
+            --generate-notes \
+            --title "$GITHUB_REF_NAME"

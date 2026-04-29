@@ -1,0 +1,85 @@
+@env:
+  NODE_ENV: development
+  PORT?: 5173
+  VITE_MODE?: local
+
+@help:
+  Vite-style frontend tasks demonstrating runtime variables, exported child
+  environment, task arguments, membership conditionals, @await, and @open.
+
+check:
+  @desc run safe Vite checks
+  @task _env
+  @await _files
+    @echo Vite checks passed
+  @or
+    @echo Vite checks failed
+    @stop
+
+_env:
+  @desc print merged Vite environment
+  @echo NODE_ENV=$NODE_ENV
+  @echo VITE_MODE=$VITE_MODE
+  @echo VITE_API_BASE=$VITE_API_BASE
+  @echo DEV_URL=http://localhost:$PORT
+
+_files:
+  @desc verify required Vite files
+  @if-not-exists package.json
+    @stop missing package.json
+  @if-not-exists index.html
+    @stop missing index.html
+  @if-not-exists src/main.js
+    @stop missing src/main.js
+  @success
+
+mode (MODE):
+  @desc select local, staging, or production mode
+  @if-not-in $MODE local staging production
+    @stop unsupported Vite mode: $MODE
+  @export VITE_MODE $MODE
+  @switch $MODE
+    @case production
+      @export NODE_ENV production
+    @default
+      @export NODE_ENV development
+  @echo VITE_MODE=$VITE_MODE
+  @echo NODE_ENV=$NODE_ENV
+
+dev:
+  @desc simulate parallel client and server startup
+  client:
+    @desc simulate client startup
+    @echo client starts
+    sleep 1
+    @echo client ready
+    @success
+  server:
+    @desc simulate server startup
+    @echo server starts
+    sleep 2
+    @echo server ready
+    @success
+
+  @set DEV_URL http://localhost:$PORT
+  @await dev:server dev:client
+    @open $DEV_URL
+  @or
+    @echo dev startup failed
+    @stop
+
+browser:
+  @desc open the local Vite URL
+  @set DEV_URL http://localhost:$PORT
+  @open $DEV_URL
+
+build (MODE):
+  @desc build production assets for a supported mode
+  @task _files
+  @task mode $MODE
+  npm run build
+
+preview:
+  @desc preview the production build
+  @task build production
+  npm run preview -- --host 127.0.0.1 --port $PORT

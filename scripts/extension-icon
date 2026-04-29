@@ -1,0 +1,19 @@
+#!/bin/sh
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+CONVERTER=${CJ_RSVG_CONVERT:-rsvg-convert}
+SOURCE="$ROOT/logo/cj-logo-color-d.svg"
+DESTINATION="$ROOT/editors/vscode-cjtaskrunner/icon.png"
+
+command -v "$CONVERTER" >/dev/null 2>&1 || {
+  printf 'extension-icon: rsvg-convert is required; install librsvg\n' >&2
+  exit 1
+}
+
+test -f "$SOURCE" || {
+  printf 'extension-icon: missing source logo: %s\n' "$SOURCE" >&2
+  exit 1
+}
+
+"$CONVERTER" -w 256 -h 256 "$SOURCE" -o "$DESTINATION"

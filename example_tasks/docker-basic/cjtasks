@@ -1,0 +1,65 @@
+@env:
+  IMAGE_NAME?: cjtaskrunner-docker-basic
+  APP_PORT?: 8080
+
+@help:
+  Docker tasks demonstrating task arguments, runtime exports, filesystem
+  checks, parallel validation, and nested Compose helpers.
+
+check:
+  @desc run dependency-free Docker example checks
+  @task _env
+  @await _files
+    @echo docker checks passed
+  @or
+    @echo docker checks failed
+    @stop
+
+_env:
+  @desc print Docker-related environment
+  @echo IMAGE_NAME=$IMAGE_NAME
+  @echo IMAGE_REF=$IMAGE_NAME:local
+  @echo APP_PORT=$APP_PORT
+  @echo APP_MESSAGE=$APP_MESSAGE
+
+_files:
+  @desc verify Docker example files
+  @if-not-exists Dockerfile
+    @stop missing Dockerfile
+  @if-not-exists compose.yaml
+    @stop missing compose.yaml
+  @if-not-exists app/server.py
+    @stop missing app/server.py
+  @success
+
+image (TAG):
+  @desc build the Docker image with local, test, or latest tag
+  @if-not-in $TAG local test latest
+    @stop unsupported image tag: $TAG
+  @task _files
+  @set IMAGE_REF $IMAGE_NAME:$TAG
+  @export IMAGE_REF
+  docker build -t $IMAGE_REF .
+
+run (TAG):
+  @desc run a tagged image and publish APP_PORT
+  @task image $TAG
+  docker run --rm -p $APP_PORT:8080 -e APP_MESSAGE=$APP_MESSAGE $IMAGE_REF
+
+compose:
+  @desc Docker Compose helpers
+  config:
+    @desc print resolved Docker Compose config
+    @task _files
+    docker compose config
+  up (TAG):
+    @desc run Compose with an exported IMAGE_REF
+    @if-not-in $TAG local test latest
+      @stop unsupported image tag: $TAG
+    @set IMAGE_REF $IMAGE_NAME:$TAG
+    @export IMAGE_REF
+    docker compose up --build
+
+clean:
+  @desc remove local Docker example scratch output
+  @clean .docker

@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+
+from pathlib import Path
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+
+ROOT = Path(__file__).resolve().parent.parent
+DOCS = ROOT / "docs"
+SUMMARY = DOCS / "SUMMARY.md"
+BOOK_CONFIG = DOCS / "book.toml"
+BOOK_CSS = DOCS / "cjtaskrunner.css"
+BOOK_JS = DOCS / "cjtaskrunner.js"
+LOGO = ROOT / "logo" / "cj-logo-color-d.svg"
+STAGE = Path(
+    os.environ.get("CJ_DOCS_STAGE_DIR", ROOT / "target/docs-book")
+).expanduser().resolve()
+OUTPUT = Path(
+    os.environ.get("CJ_DOCS_OUTPUT_DIR", ROOT / "dist/docs")
+).expanduser().resolve()
+CONVERTER = os.environ.get("CJ_DOCS_RSVG_CONVERT", "rsvg-convert")
+MDBOOK = os.environ.get("CJ_DOCS_MDBOOK", "mdbook")
+GITHUB_ROOT = "https://github.com/jgusta/cjtaskrunner"
+
+FRONTMATTER = re.compile(r"\A---\r?\n.*?\r?\n---\r?\n(?:\r?\n)?", re.DOTALL)
+MARKDOWN_LINK = re.compile(
+    r"(?P<prefix>!?\[[^\]]*\]\()(?P<target>[^)]+)(?P<suffix>\))"
+)
+
+def fail(message: str, status: int = 1) -> None:
+    print(f"docs: {message}", file=sys.stderr)
+    raise SystemExit(status)
+
+
+def require_tool(command: str, message: str) -> None:
+    if shutil.which(command) is None:
+        fail(message)
+
+
+def reset_stage() -> None:
+    protected = {ROOT.resolve(), DOCS.resolve(), ROOT.parent.resolve()}
+    if STAGE in protected:
+        fail(f"refusing to replace protected path {STAGE}")
+    if STAGE.exists():
+        shutil.rmtree(STAGE)
+    (STAGE / "src").mkdir(parents=True)
+    (STAGE / "theme").mkdir(parents=True)
+
+
+def strip_frontmatter(source: str) -> str:
+    return FRONTMATTER.sub("", source, count=1)
+
+
+def rewrite_target(source_path: Path, target: str) -> str:
+    if target.startswith(("http://", "https://", "mailto:", "#")):
+        return target
+
+    path_text, separator, fragment = target.partition("#")
+    if not path_text:
+        return target
+
+    resolved = (source_path.parent / path_text).resolve()
+    try:
+        resolved.relative_to(DOCS.resolve())
+        return target
+    except ValueError:
+        pass
+
+    try:
+        relative = resolved.relative_to(ROOT.resolve())
+    except ValueError:
+        return target
+
+    kind = "tree" if resolved.is_dir() else "blob"
+    rewritten = f"{GITHUB_ROOT}/{kind}/main/{relative.as_posix()}"
+    return f"{rewritten}#{fragment}" if separator else rewritten
+
+
+def transform_markdown(path: Path) -> str:
+    source = strip_frontmatter(path.read_text(encoding="utf-8"))
+    return MARKDOWN_LINK.sub(
+        lambda match: (
+            match.group("prefix")
+            + rewrite_target(path, match.group("target"))
+            + match.group("suffix")
+        ),
+        source,
+    )
+
+
+def copy_documentation() -> None:
+    for source in sorted(DOCS.rglob("*")):
+        if not source.is_file():
+            continue
+        relative = source.relative_to(DOCS)
+        if any(part.startswith(".") for part in relative.parts):
+            continue
+        if source in {BOOK_CONFIG, BOOK_CSS, BOOK_JS}:
+            continue
+
+        destination = STAGE / "src" / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if source == SUMMARY:
+            shutil.copy2(source, destination)
+        elif source.suffix == ".md":
+            destination.write_text(transform_markdown(source), encoding="utf-8")
+        else:
+            shutil.copy2(source, destination)
+
+
+def render_logo(destination: Path, size: int) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        [
+            CONVERTER,
+            "-w",
+            str(size),
+            "-h",
+            str(size),
+            str(LOGO),
+            "-o",
+            str(destination),
+        ],
+        check=True,
+    )
+
+
+def prepare() -> None:
+    require_tool(
+        CONVERTER,
+        "rsvg-convert is required; install librsvg",
+    )
+    if not LOGO.exists():
+        fail(f"logo source is missing: {LOGO.relative_to(ROOT)}")
+    if not SUMMARY.is_file():
+        fail(f"book summary is missing: {SUMMARY.relative_to(ROOT)}")
+    if not BOOK_CONFIG.is_file():
+        fail(f"book config is missing: {BOOK_CONFIG.relative_to(ROOT)}")
+    if not BOOK_CSS.is_file():
+        fail(f"book stylesheet is missing: {BOOK_CSS.relative_to(ROOT)}")
+    if not BOOK_JS.is_file():
+        fail(f"book script is missing: {BOOK_JS.relative_to(ROOT)}")
+
+    reset_stage()
+    copy_documentation()
+    shutil.copy2(BOOK_CONFIG, STAGE / "book.toml")
+    shutil.copy2(BOOK_CSS, STAGE / "theme/cjtaskrunner.css")
+    shutil.copy2(BOOK_JS, STAGE / "theme/cjtaskrunner.js")
+    render_logo(STAGE / "src/cjtaskrunner-logo.png", 320)
+    render_logo(STAGE / "theme/favicon.png", 64)
+
+
+def build() -> None:
+    require_tool(MDBOOK, "mdbook is required; install mdBook 0.5.3")
+    prepare()
+    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        [MDBOOK, "build", str(STAGE), "--dest-dir", str(OUTPUT)],
+        check=True,
+    )
+
+
+def serve() -> None:
+    require_tool(MDBOOK, "mdbook is required; install mdBook 0.5.3")
+    prepare()
+    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        [
+            MDBOOK,
+            "serve",
+            str(STAGE),
+            "--dest-dir",
+            str(OUTPUT),
+            "--open",
+        ],
+        check=True,
+    )
+
+
+def main() -> None:
+    if len(sys.argv) != 2:
+        fail("usage: scripts/docs <prepare|build|serve>", status=2)
+    command = sys.argv[1]
+    if command == "prepare":
+        prepare()
+    elif command == "build":
+        build()
+    elif command == "serve":
+        serve()
+    else:
+        fail("usage: scripts/docs <prepare|build|serve>", status=2)
+
+
+if __name__ == "__main__":
+    main()

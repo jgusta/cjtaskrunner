@@ -1,0 +1,92 @@
+<div style="display:flex;align-items:center;justify-content:center;margin-bottom:0;">
+  <img src="logo/cj-logo-color-f.svg" alt="CJTaskrunner logo" style="margin:0;display:block;height:auto;width:80px;" />
+  <img src="logo/cj-words.svg" alt="CJTaskrunner words logo" style="margin:0;display:block;width:320px;height:auto;" />
+</div>
+<div style="margin:0;text-align:center;font-size:1.4em;">
+  Independent task wrangler
+</div>
+<div style="display:flex;align-items:center;justify-content:center;margin-bottom:0;">
+  <img alt="license" src="https://img.shields.io/github/license/jgusta/cjtaskrunner">
+  <img alt="version" src="https://img.shields.io/github/v/release/jgusta/cjtaskrunner">
+</div>
+
+## About CJTaskrunner
+
+CJTaskrunner is a lightweight command-line task runner for Linux and macOS. It has a near-zero learning curve. The `cjtasks` file acts as one catalog for a repository's development, build, and release workflows.
+
+Install the latest release:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/jgusta/cjtaskrunner/main/install.sh | bash
+```
+
+## Get started
+
+A `cjtasks` file task consists of a label and the command to run:
+
+```cjtasks
+build:
+  npm run build
+dev:
+  npm run dev
+```
+
+The CJTaskrunner executable, `cj` lists the available tasks when run by itself:
+
+```shell
+> cj
+Tasks in your/repo:
+   build
+   dev
+```
+
+Add your tasks or import tasks from `package.json`, `deno.json`, `Makefile`, and `Justfile`:
+
+```shell
+cj --auto
+```
+
+Open the taskfile in your editor:
+
+```shell
+cj -e
+```
+
+## Learn more
+
+Read the [manual](https://jgusta.github.io/cjtaskrunner/manual/) for the taskfile
+format, directive reference, and editor setup.
+
+## Why CJTaskrunner?
+
+### CJTaskrunner has its own task format:
+- Uses a small domain-specific language, simpler than YAML
+- Top-level entries are your task name
+- Indented lines are commands that run as they would from the shell
+
+All other lines are fully optional directives. These are flat with only user-supplied names or paths: 
+- Control task flow with `@if`, `@else`, `@switch`,  `@stop`, `@success`, `@fail`, `@and`, `@or`
+- Manipulate environment variables with `@set`, `@env:`, `@export` and interpolate them in commands
+- Navigate the file system using `@cd`, `@back`, `@mkdir`, `@cp`, `@rename`, `@clean`
+
+### CJTaskrunner is built for modern workflows:
+- **Asynchronous task execution** with `@await`
+- Tasks are discoverable and **self-documenting** from the command line
+- Tasks are **composable** and isolated
+- Strings are plain text; use quotes only when the command being run needs them
+- Interpolate and manipulate environment variables, or have your task accept **arguments** that will be passed to your commands
+- Can automatically add all your tasks from npm's `package.json`, `deno.json`, `Makefile`, and `Justfile`
+
+### CJTaskrunner is new but it has mature features:
+- A **language server** built into the executable
+- Organize your tasks into **subtasks**
+- An official VS Code extension with syntax highlighting, inline help, outline support, a formatter and a task list panel
+- Installation **via Homebrew** or a one-line shell installer
+- **Shell-completions** for bash, zsh and fish
+- Automatic Python virtualenv sourcing
+
+
+
+## License
+
+MIT. Copyright (c) 2026 jgusta.
