@@ -106,6 +106,8 @@ include!("runner.rs");
 include!("directives.rs");
 include!("command_text.rs");
 
+pub mod lsp;
+
 #[cfg(test)]
 mod tests {
     use super::*;

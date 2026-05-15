@@ -1,0 +1,75 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "CJTaskrunner",
+  "scopeName": "source.cjtasks",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#topLevel"
+    },
+    {
+      "include": "#directives"
+    },
+    {
+      "include": "#variables"
+    },
+    {
+      "include": "#strings"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.cjtasks",
+          "match": "^\\s*#.*$"
+        }
+      ]
+    },
+    "topLevel": {
+      "patterns": [
+        {
+          "name": "entity.name.function.task.cjtasks",
+          "match": "^[A-Za-z0-9_-]+(?=:)"
+        }
+      ]
+    },
+    "directives": {
+      "patterns": [
+        {
+          "name": "keyword.control.directive.cjtasks",
+          "match": "@(?:shell|task|echo|clean|stop|set|export|unset|return|success|fail|and|or|if|else|if-exists|if-missing|if-set|if-unset|switch|case|default)\\b"
+        }
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {
+          "name": "variable.other.cjtasks",
+          "match": "\\$[A-Za-z_][A-Za-z0-9_]*|\\$\\{[A-Za-z_][A-Za-z0-9_]*(?::-.*)?\\}"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.cjtasks",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "include": "#variables"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.cjtasks",
+          "begin": "'",
+          "end": "'"
+        }
+      ]
+    }
+  }
+}

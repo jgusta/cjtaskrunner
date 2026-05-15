@@ -14,6 +14,12 @@ Build the CLI:
 cargo build
 ```
 
+Build the LSP server:
+
+```sh
+cargo build --bin cjtaskrunner-lsp
+```
+
 Run it through Cargo:
 
 ```sh
@@ -44,6 +50,24 @@ cj <taskfile-or-directory> <task>
 cjtaskrunner <task>
 cjtaskrunner <taskfile-or-directory> <task>
 ```
+
+## Language Server
+
+CJTaskrunner includes a Language Server Protocol binary:
+
+```sh
+cjtaskrunner-lsp
+```
+
+Current LSP capabilities:
+
+- diagnostics for taskfile syntax, duplicate tasks/env entries, invalid names, unknown directives, and malformed directive arguments
+- document symbols for tasks
+- completions for directives, task names after `@task`, and variables after `$`
+- hover help for directives
+- go-to-definition from `@task name` to `name:`
+
+The LSP is stdio-based. Configure editors to run `cjtaskrunner-lsp` for files named `cjtasks` and `*.cjtasks`.
 
 ## Taskfile Discovery
 

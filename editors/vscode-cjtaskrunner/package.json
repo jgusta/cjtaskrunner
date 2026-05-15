@@ -1,0 +1,76 @@
+{
+  "name": "cjtaskrunner-vscode",
+  "displayName": "CJTaskrunner",
+  "description": "VS Code language support for CJTaskrunner taskfiles.",
+  "version": "0.0.1",
+  "publisher": "cjtaskrunner",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:cjtasks"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "cjtasks",
+        "aliases": [
+          "cjtasks",
+          "CJTaskrunner"
+        ],
+        "filenames": [
+          "cjtasks"
+        ],
+        "extensions": [
+          ".cjtasks"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "cjtasks",
+        "scopeName": "source.cjtasks",
+        "path": "./syntaxes/cjtasks.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "CJTaskrunner",
+      "properties": {
+        "cjtaskrunner.lsp.path": {
+          "type": "string",
+          "default": "",
+          "description": "Path to cjtaskrunner-lsp. Empty uses ../../target/debug/cjtaskrunner-lsp relative to this extension."
+        },
+        "cjtaskrunner.lsp.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Trace communication with the CJTaskrunner language server."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -w -p ./",
+    "vscode:prepublish": "npm run compile"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.5"
+  }
+}
