@@ -21,6 +21,8 @@ $RECYCLE.BIN/
 *.swp
 *.swo
 *~
+editors/vscode-cjtaskrunner/node_modules/
+editors/vscode-cjtaskrunner/out/
 
 # Rust build artifacts
 /target/

@@ -45,7 +45,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const trace = config.get<string>("lsp.trace.server", "off");
   client.setTrace(trace === "verbose" ? Trace.Verbose : trace === "messages" ? Trace.Messages : Trace.Off);
 
-  context.subscriptions.push(client.start());
+  context.subscriptions.push({
+    dispose: () => {
+      void client?.stop();
+    }
+  });
+  await client.start();
 }
 
 export async function deactivate(): Promise<void> {
