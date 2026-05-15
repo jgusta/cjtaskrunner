@@ -117,7 +117,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .expect("clock")
             .as_nanos();
-        env::temp_dir().join(format!("cjtasks-{name}-{id}"))
+        env::temp_dir().join(format!("cjtaskrunner-{name}-{id}"))
     }
 
     fn minimal_env() -> RuntimeEnv {
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn parses_env_and_tasks() {
-        let path = Path::new("cjt");
+        let path = Path::new("cjtasks");
         let parsed = parse_task_file(
             r#"
 # Project tasks
@@ -159,7 +159,7 @@ test123:
     fn rejects_duplicate_env_entries() {
         let err = parse_task_file(
             "env:\n  NAME: one\n  NAME?: two\nrun:\n  echo hi\n",
-            Path::new("cjt"),
+            Path::new("cjtasks"),
         )
         .expect_err("duplicate env should fail");
 
@@ -168,7 +168,7 @@ test123:
 
     #[test]
     fn rejects_bad_indentation() {
-        let err = parse_task_file("run:\n   echo hi\n", Path::new("cjt"))
+        let err = parse_task_file("run:\n   echo hi\n", Path::new("cjtasks"))
             .expect_err("bad indentation should fail");
 
         assert!(err.to_string().contains("even number of spaces"));
@@ -176,7 +176,7 @@ test123:
 
     #[test]
     fn rejects_trailing_colon_directives() {
-        let err = parse_task_file("run:\n  @if true:\n    echo hi\n", Path::new("cjt"))
+        let err = parse_task_file("run:\n  @if true:\n    echo hi\n", Path::new("cjtasks"))
             .expect_err("directive colon should fail");
 
         assert!(err
@@ -185,14 +185,30 @@ test123:
     }
 
     #[test]
-    fn discovers_cjt_before_cjtasks() {
+    fn discovers_default_cjtasks() {
         let dir = test_path("discover");
         fs::create_dir_all(&dir).expect("mkdir");
+        File::create(dir.join("build.cjtasks")).expect("build.cjtasks");
         File::create(dir.join("cjtasks")).expect("cjtasks");
-        File::create(dir.join("cjt")).expect("cjt");
 
         let discovered = discover_task_file(&dir).expect("discover");
-        assert_eq!(discovered.file_name().unwrap(), "cjt");
+        assert_eq!(discovered.file_name().unwrap(), "cjtasks");
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn discovers_single_cjtasks_extension_and_rejects_ambiguous_extensions() {
+        let dir = test_path("extension-discover");
+        fs::create_dir_all(&dir).expect("mkdir");
+        File::create(dir.join("build.cjtasks")).expect("build.cjtasks");
+
+        let discovered = discover_task_file(&dir).expect("discover extension");
+        assert_eq!(discovered.file_name().unwrap(), "build.cjtasks");
+
+        File::create(dir.join("deploy.cjtasks")).expect("deploy.cjtasks");
+        let err = discover_task_file(&dir).expect_err("ambiguous extensions should fail");
+        assert!(err.to_string().contains("multiple *.cjtasks"));
 
         fs::remove_dir_all(dir).expect("cleanup");
     }
@@ -257,7 +273,7 @@ test123:
         fs::create_dir_all(&dir).expect("mkdir");
         let parsed = parse_task_file(
             "run:\n  sh -c 'test \"$1\" = \"a b; echo injected\"' ignored $CJTEST_VALUE\n",
-            Path::new("cjt"),
+            Path::new("cjtasks"),
         )
         .expect("parse");
         let mut env = minimal_env();
@@ -276,7 +292,7 @@ test123:
         fs::create_dir_all(&dir).expect("mkdir");
         let parsed = parse_task_file(
             "run:\n  @shell printf '%s' $CJTEST_VALUE > out.txt\n",
-            Path::new("cjt"),
+            Path::new("cjtasks"),
         )
         .expect("parse");
         let mut env = minimal_env();
@@ -297,7 +313,7 @@ test123:
     fn task_composition_and_cycle_detection() {
         let parsed = parse_task_file(
             "first:\n  @task second\nsecond:\n  true\ncycle:\n  @task cycle\n",
-            Path::new("cjt"),
+            Path::new("cjtasks"),
         )
         .expect("parse");
         let dir = test_path("task");
@@ -341,7 +357,7 @@ test123:
   @if-unset FOUND
     @shell printf unset > unset.txt
 "#,
-            Path::new("cjt"),
+            Path::new("cjtasks"),
         )
         .expect("parse");
         let mut env = minimal_env();
@@ -376,7 +392,7 @@ test123:
   @export SECRET
   @shell printf "\$SECRET" > after.txt
 "#,
-            Path::new("cjt"),
+            Path::new("cjtasks"),
         )
         .expect("parse");
         let mut env = minimal_env();
@@ -399,7 +415,7 @@ test123:
     fn semicolons_split_same_level_expressions() {
         let parsed = parse_task_file(
             "run:\n  @set MODE prod; @if $MODE == prod\n    true\n",
-            Path::new("cjt"),
+            Path::new("cjtasks"),
         )
         .expect("parse");
 
@@ -424,7 +440,7 @@ test123:
   @if-missing stale.txt
     @success
 "#,
-            Path::new("cjt"),
+            Path::new("cjtasks"),
         )
         .expect("parse");
         let mut env = minimal_env();
@@ -434,7 +450,7 @@ test123:
         assert!(!dir.join("stale.txt").exists());
 
         let parsed =
-            parse_task_file("run:\n  @stop nope\n  true\n", Path::new("cjt")).expect("parse");
+            parse_task_file("run:\n  @stop nope\n  true\n", Path::new("cjtasks")).expect("parse");
         let code = run_task(&dir, &parsed, "run", &mut env, &mut Vec::new()).expect("run");
         assert_eq!(code, 1);
 
@@ -451,7 +467,7 @@ test123:
     @shell printf captured
   @shell test "$RESULT" = captured
 "#,
-            Path::new("cjt"),
+            Path::new("cjtasks"),
         )
         .expect("parse");
         let mut env = minimal_env();
@@ -467,10 +483,10 @@ test123:
     fn resolves_single_arg_from_current_directory() {
         let dir = test_path("single-arg");
         fs::create_dir_all(&dir).expect("mkdir");
-        fs::write(dir.join("cjt"), "run:\n  true\n").expect("write cjt");
+        fs::write(dir.join("cjtasks"), "run:\n  true\n").expect("write cjtasks");
 
         let resolved = resolve_invocation_from(&["run".to_string()], &dir).expect("resolve");
-        assert_eq!(resolved.0.file_name().unwrap(), "cjt");
+        assert_eq!(resolved.0.file_name().unwrap(), "cjtasks");
         assert_eq!(resolved.1, "run");
 
         fs::remove_dir_all(dir).expect("cleanup");
@@ -481,6 +497,7 @@ test123:
         let dir = test_path("two-arg");
         fs::create_dir_all(&dir).expect("mkdir");
         fs::write(dir.join("cjtasks"), "run:\n  true\n").expect("write cjtasks");
+        fs::write(dir.join("build.cjtasks"), "run:\n  true\n").expect("write build.cjtasks");
 
         let from_dir = resolve_invocation_from(
             &[dir.to_string_lossy().to_string(), "run".to_string()],
@@ -499,6 +516,35 @@ test123:
         .expect("resolve file");
         assert_eq!(from_file.0, dir.join("cjtasks"));
 
+        let from_extension = resolve_invocation_from(
+            &[
+                dir.join("build.cjtasks").to_string_lossy().to_string(),
+                "run".to_string(),
+            ],
+            &dir,
+        )
+        .expect("resolve extension file");
+        assert_eq!(from_extension.0, dir.join("build.cjtasks"));
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn rejects_unrecognized_taskfile_name() {
+        let dir = test_path("unrecognized-taskfile");
+        fs::create_dir_all(&dir).expect("mkdir");
+        fs::write(dir.join("tasks"), "run:\n  true\n").expect("write tasks");
+
+        let err = resolve_invocation_from(
+            &[
+                dir.join("tasks").to_string_lossy().to_string(),
+                "run".to_string(),
+            ],
+            &dir,
+        )
+        .expect_err("unrecognized taskfile name should fail");
+        assert!(err.to_string().contains("'.cjtasks' extension"));
+
         fs::remove_dir_all(dir).expect("cleanup");
     }
 
@@ -506,9 +552,10 @@ test123:
     fn bare_relative_task_file_runs_from_current_directory() {
         let dir = test_path("relative-file");
         fs::create_dir_all(&dir).expect("mkdir");
-        fs::write(dir.join("cjt"), "run:\n  @shell pwd > out.txt\n").expect("write cjt");
+        fs::write(dir.join("cjtasks"), "run:\n  @shell pwd > out.txt\n").expect("write cjtasks");
 
-        let code = run_cli_from_cwd(&["cjt".to_string(), "run".to_string()], &dir).expect("run");
+        let code =
+            run_cli_from_cwd(&["cjtasks".to_string(), "run".to_string()], &dir).expect("run");
         assert_eq!(code, 0);
         let reported = fs::read_to_string(dir.join("out.txt")).expect("out");
         assert_eq!(

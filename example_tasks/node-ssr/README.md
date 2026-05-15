@@ -4,7 +4,7 @@ This example is a tiny server-side rendered Node app. It uses the `cjtasks` file
 
 ## Notable Files
 
-- `cjtasks`: taskfile discovered by CJTasks.
+- `cjtasks`: taskfile discovered by CJTaskrunner.
 - `.env`: provides `SSR_GREETING`.
 - `package.json`: documents equivalent npm scripts.
 - `src/server.js`: starts the HTTP server.

@@ -1,5 +1,5 @@
 [package]
-name = "cjtasks-rust-cli-example"
+name = "cjtaskrunner-rust-cli-example"
 version = "0.1.0"
 edition = "2021"
 

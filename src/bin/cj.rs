@@ -7,7 +7,7 @@ fn main() {
     match cjtaskrunner::run_cli(&args) {
         Ok(code) => process::exit(code),
         Err(err) => {
-            eprintln!("cjtaskrunner: {err}");
+            eprintln!("cj: {err}");
             process::exit(2);
         }
     }

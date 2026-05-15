@@ -1,5 +1,5 @@
 env:
-  IMAGE_NAME?: cjtasks-docker-basic
+  IMAGE_NAME?: cjtaskrunner-docker-basic
   APP_PORT?: 8080
 
 envcheck:

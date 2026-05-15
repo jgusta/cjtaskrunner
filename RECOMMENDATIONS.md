@@ -1,24 +1,24 @@
-# CJTasks Round 2 Format Recommendations
+# CJTaskrunner Round 2 Format Recommendations
 
-This document records the round 2 direction for extending the CJTasks task file format with direct argv execution, explicit shell execution, safe interpolation, conditionals, switch statements, runtime variables, and task composition.
+This document records the round 2 direction for extending the CJTaskrunner taskfile format with direct argv execution, explicit shell execution, safe interpolation, conditionals, switch statements, runtime variables, and task composition.
 
 ## Core Principle
 
-Keep ordinary command lines looking like shell commands, but execute them as direct argv commands by default. Make CJTasks-only control syntax visually distinct.
+Keep ordinary command lines looking like shell commands, but execute them as direct argv commands by default. Make CJTaskrunner-only control syntax visually distinct.
 
 Recommended rule:
 
-- If a task body line starts with a reserved marker such as `@`, parse it as a CJTasks directive.
+- If a task body line starts with a reserved marker such as `@`, parse it as a CJTaskrunner directive.
 - Otherwise, parse it as a command plus argv and execute it directly.
 
 This avoids shell injection by default while still keeping common task lines familiar.
 
 ## Recommended Meta Syntax
 
-Use `@` for CJTasks directives.
+Use `@` for CJTaskrunner directives.
 
 Only top-level task keys and `env:` use trailing colons. Directive lines do not use trailing colons.
-
+ 
 Example:
 
 ```yaml
@@ -47,7 +47,7 @@ build:
   cp target/release/cj ./bin/cj
 ```
 
-CJTasks behavior stays explicit:
+CJTaskrunner behavior stays explicit:
 
 ```yaml
 deploy:
@@ -106,7 +106,7 @@ and it must not allow injected shell syntax such as pipes, redirects, semicolons
 
 Implementation note: ordinary command lines should be parsed into argv tokens and executed with `std::process::Command`. `@shell` is the explicit escape hatch for commands that intentionally need shell features. In `@shell` command text, interpolated values must be shell-escaped before the shell sees them.
 
-Avoid complex shell-like expansion in the CJTasks layer for now:
+Avoid complex shell-like expansion in the CJTaskrunner layer for now:
 
 - No pattern replacement such as `${VAR/foo/bar}`.
 - No command substitution.
@@ -117,7 +117,7 @@ Example:
 
 ```yaml
 env:
-  APP_NAME?: cjtasks
+  APP_NAME?: cjtaskrunner
   BUILD_DIR?: target/release
 
 release:
@@ -127,7 +127,7 @@ release:
 
 ## Task Composition
 
-Use `@task` to call another task from the same task file.
+Use `@task` to call another task from the same taskfile.
 
 ```yaml
 ci:
@@ -147,8 +147,8 @@ build:
 
 Recommended semantics:
 
-- `@task name` runs another task through CJTasks, not through the shell.
-- The called task uses the same task file and base directory.
+- `@task name` runs another task through CJTaskrunner, not through the shell.
+- The called task uses the same taskfile and base directory.
 - The called task receives the effective environment.
 - Detect and report recursive task cycles.
 - Stop the parent task if the called task fails.
@@ -161,7 +161,7 @@ ci:
   @task test
 ```
 
-This uses CJTasks semantics directly.
+This uses CJTaskrunner semantics directly.
 
 ```yaml
 ci-shell:
@@ -173,7 +173,7 @@ This shells out to the installed `cj` executable if written under `@shell`, or r
 
 ## Command Execution Model
 
-Ordinary task lines execute directly by default. CJTasks should split each ordinary command line into argv tokens, expand variables into single argv tokens, and run the command with `std::process::Command`.
+Ordinary task lines execute directly by default. CJTaskrunner should split each ordinary command line into argv tokens, expand variables into single argv tokens, and run the command with `std::process::Command`.
 
 Example:
 
@@ -197,7 +197,7 @@ example:
   mkdir $NAME
 ```
 
-If `NAME` is `-p dir/mydir`, CJTasks executes:
+If `NAME` is `-p dir/mydir`, CJTaskrunner executes:
 
 ```text
 program: mkdir
@@ -251,9 +251,9 @@ build:
 
 ## Variables And Assignment
 
-CJTasks should maintain a run-global variable map. Execution order matters: variables set by earlier directives are visible to later commands, conditionals, switches, `@shell` lines, and composed tasks.
+CJTaskrunner should maintain a run-global variable map. Execution order matters: variables set by earlier directives are visible to later commands, conditionals, switches, `@shell` lines, and composed tasks.
 
-Use `@set` to assign a CJTasks variable:
+Use `@set` to assign a CJTaskrunner variable:
 
 ```yaml
 build:
@@ -279,9 +279,9 @@ Recommended `@set` semantics:
 - The value is the rest of the directive line after the variable name.
 - Values are strings.
 - `$VAR` and `${VAR}` inside the value are interpolated before assignment.
-- `@set` updates the run-global CJTasks variable map.
+- `@set` updates the run-global CJTaskrunner variable map.
 - `@set` does not automatically export the variable to child process environments.
-- Later CJTasks directives and interpolations see the updated value.
+- Later CJTaskrunner directives and interpolations see the updated value.
 - Called tasks see the updated value.
 - Changes made inside called tasks remain visible after the called task returns.
 
@@ -303,7 +303,7 @@ Recommended `@export` syntax:
 
 Recommended `@export` semantics:
 
-- `@export NAME` exports the current CJTasks variable value for `NAME`.
+- `@export NAME` exports the current CJTaskrunner variable value for `NAME`.
 - `@export NAME value` sets `NAME` and exports it in one step.
 - Exported variables are included in the environment for later ordinary command lines and `@shell` lines.
 - Exported variables are visible to later composed tasks.
@@ -320,7 +320,7 @@ clean-env:
 
 Recommended `@unset` semantics:
 
-- `@unset NAME` removes the variable from the CJTasks variable map.
+- `@unset NAME` removes the variable from the CJTaskrunner variable map.
 - If `NAME` was exported, it is removed from the exported environment overlay for later process executions.
 - Unsetting a missing variable is not an error.
 
@@ -328,7 +328,7 @@ The initial run-global variable map should be built from the existing environmen
 
 1. Start with the inherited process environment.
 2. Apply `.env` absent-only values.
-3. Apply task file fallbacks and overrides from `env:`.
+3. Apply taskfile fallbacks and overrides from `env:`.
 4. Apply Python virtual environment path adjustments.
 5. Execute task lines in order, allowing `@set`, `@export`, and `@unset` to mutate later state.
 
@@ -395,7 +395,7 @@ ${VAR} != value
 
 Recommended semantics:
 
-- Paths in `@if-exists` and `@if-missing` are relative to the task file base directory.
+- Paths in `@if-exists` and `@if-missing` are relative to the taskfile base directory.
 - String comparisons are literal after interpolation.
 - Missing variables in `$VAR` or `${VAR}` should produce a clear error in comparisons.
 - Use `${VAR:-fallback}` when missing values are acceptable.
@@ -450,7 +450,7 @@ check:
     cargo test
 ```
 
-The second form looks like shell or YAML but is neither. The `@` marker makes the CJTasks language boundary obvious.
+The second form looks like shell or YAML but is neither. The `@` marker makes the CJTaskrunner language boundary obvious.
 
 ## Suggested MVP Grammar
 
@@ -488,7 +488,7 @@ The current implementation uses two-space indentation for task command lines. On
 
 - Top-level task keys and `env:` start at column 0.
 - Task keys and `env:` require trailing colons.
-- CJTasks directive lines do not use trailing colons.
+- CJTaskrunner directive lines do not use trailing colons.
 - Task body lines start at two spaces.
 - Nested directive bodies use additional two-space indentation.
 
@@ -548,4 +548,4 @@ Use:
 - `$VAR`, `${VAR}`, and `${VAR:-fallback}` for interpolation.
 - Simple predicate directives such as `@if-exists path`, `@if-missing path`, `@if-set $VAR`, and `@if-unset $VAR`.
 
-This gives CJTasks a small language without turning it into a shell clone.
+This gives CJTaskrunner a small language without turning it into a shell clone.

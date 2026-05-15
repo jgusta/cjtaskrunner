@@ -6,5 +6,5 @@ target="${2:-gibberish.txt}"
 
 {
   printf 'Update generated gibberish\n\n'
-  printf 'Generated or modified %s through a CJTasks workflow.\n' "$target"
+  printf 'Generated or modified %s through a CJTaskrunner workflow.\n' "$target"
 } > "$message_file"

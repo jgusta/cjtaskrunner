@@ -4,7 +4,7 @@ This is a minimal PySide6 project. It demonstrates Python path handling, `.env` 
 
 ## Notable Files
 
-- `cjt`: taskfile discovered by CJTasks.
+- `cjtasks`: taskfile discovered by CJTaskrunner.
 - `.env`: provides `PYSIDE_WINDOW_TITLE`.
 - `app/simple_window.py`: minimal PySide6 module and smoke-test helper.
 

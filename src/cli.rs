@@ -37,13 +37,13 @@ fn resolve_invocation_from(args: &[String], cwd: &Path) -> CjResult<(PathBuf, St
                     Ok((target, task_name))
                 } else {
                     Err(CjError::new(format!(
-                        "task file must be named 'cjt' or 'cjtasks': {}",
+                        "taskfile must be named 'cjtasks' or use the '.cjtasks' extension: {}",
                         target.display()
                     )))
                 }
             } else if target.exists() {
                 Err(CjError::new(format!(
-                    "path is neither a recognized task file nor a directory: {}",
+                    "path is neither a recognized taskfile nor a directory: {}",
                     target.display()
                 )))
             } else {
@@ -60,23 +60,44 @@ fn resolve_invocation_from(args: &[String], cwd: &Path) -> CjResult<(PathBuf, St
 }
 
 fn discover_task_file(dir: &Path) -> CjResult<PathBuf> {
-    for name in ["cjt", "cjtasks"] {
-        let path = dir.join(name);
-        if path.is_file() {
-            return Ok(path);
+    let default = dir.join("cjtasks");
+    if default.is_file() {
+        return Ok(default);
+    }
+
+    let mut extension_matches = Vec::new();
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() && has_cjtasks_extension(&path) {
+            extension_matches.push(path);
         }
     }
 
-    Err(CjError::new(format!(
-        "no cjt or cjtasks file found in {}",
-        dir.display()
-    )))
+    match extension_matches.len() {
+        1 => Ok(extension_matches.remove(0)),
+        0 => Err(CjError::new(format!(
+            "no cjtasks or *.cjtasks taskfile found in {}",
+            dir.display()
+        ))),
+        _ => Err(CjError::new(format!(
+            "multiple *.cjtasks taskfiles found in {}; pass one explicitly",
+            dir.display()
+        ))),
+    }
 }
 
 fn is_recognized_task_file(path: &Path) -> bool {
     path.file_name()
         .and_then(|name| name.to_str())
-        .is_some_and(|name| name == "cjt" || name == "cjtasks")
+        .is_some_and(|name| name == "cjtasks")
+        || has_cjtasks_extension(path)
+}
+
+fn has_cjtasks_extension(path: &Path) -> bool {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension == "cjtasks")
 }
 
 fn task_file_base_dir(task_file: &Path) -> &Path {

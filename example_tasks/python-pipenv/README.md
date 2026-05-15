@@ -4,7 +4,7 @@ This project demonstrates a Pipenv-oriented taskfile. It keeps Pipenv commands i
 
 ## Notable Files
 
-- `cjtasks`: taskfile discovered by CJTasks.
+- `cjtasks`: taskfile discovered by CJTaskrunner.
 - `.env`: provides `PIPENV_DOTENV_LOCATION` and `PIPENV_EXAMPLE_MESSAGE`.
 - `Pipfile`: empty app and dev dependency sets for the example.
 - `app/pipenv_app.py`: module executed by the `run` task.

@@ -1,10 +1,10 @@
 # Rust CLI Example
 
-This is a tiny Rust CLI project with Cargo-oriented CJTasks. It demonstrates taskfile fallback environment values and commands that run from the example directory.
+This is a tiny Rust CLI project with Cargo-oriented CJTaskrunner. It demonstrates taskfile fallback environment values and commands that run from the example directory.
 
 ## Notable Files
 
-- `cjt`: taskfile discovered by CJTasks.
+- `cjtasks`: taskfile discovered by CJTaskrunner.
 - `.env`: provides `RUST_LOG`.
 - `Cargo.toml`: Rust package metadata.
 - `src/main.rs`: tiny CLI program.

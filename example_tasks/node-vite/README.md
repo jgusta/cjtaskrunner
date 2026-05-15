@@ -4,7 +4,7 @@ This is a lightweight Vite-style project. It demonstrates npm script commands, t
 
 ## Notable Files
 
-- `cjt`: taskfile discovered by CJTasks.
+- `cjtasks`: taskfile discovered by CJTaskrunner.
 - `.env`: provides `VITE_API_BASE` and `VITE_FEATURE_FLAG`.
 - `package.json`: defines `dev`, `build`, and `preview` npm scripts.
 - `index.html`: Vite entry HTML.

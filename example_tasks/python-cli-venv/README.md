@@ -4,7 +4,7 @@ This is a venv-oriented Python example focused on module execution and explicit 
 
 ## Notable Files
 
-- `cjt`: taskfile discovered by CJTasks.
+- `cjtasks`: taskfile discovered by CJTaskrunner.
 - `.env`: provides `CLI_NAME`.
 - `pyproject.toml`: package metadata for the example.
 - `src/local_cli/__main__.py`: module executed by the `run` task.
@@ -36,4 +36,4 @@ CJ_VENV=/path/to/venv cargo run -- example_tasks/python-cli-venv pathcheck
 
 ## Prerequisites and Caveats
 
-These tasks expect Python 3 on `PATH`. If `CJ_VENV` is set, CJTasks uses that virtual environment before looking for a local `.venv`; the selected environment must have a `bin` directory. `clean` removes generated `__pycache__` directories.
+These tasks expect Python 3 on `PATH`. If `CJ_VENV` is set, CJTaskrunner uses that virtual environment before looking for a local `.venv`; the selected environment must have a `bin` directory. `clean` removes generated `__pycache__` directories.

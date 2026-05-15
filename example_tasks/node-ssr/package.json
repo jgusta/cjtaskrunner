@@ -1,5 +1,5 @@
 {
-  "name": "cjtasks-node-ssr-example",
+  "name": "cjtaskrunner-node-ssr-example",
   "private": true,
   "type": "module",
   "scripts": {

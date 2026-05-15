@@ -1,7 +1,7 @@
 services:
   web:
     build: .
-    image: ${IMAGE_NAME:-cjtasks-docker-basic}
+    image: ${IMAGE_NAME:-cjtaskrunner-docker-basic}
     ports:
       - "${APP_PORT:-8080}:8080"
     environment:

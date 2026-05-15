@@ -1,10 +1,10 @@
 # Python venv Example
 
-This project shows a conventional Python package layout and local `.venv` workflow. CJTasks automatically prepends `.venv/bin` to `PATH` after the virtual environment exists.
+This project shows a conventional Python package layout and local `.venv` workflow. CJTaskrunner automatically prepends `.venv/bin` to `PATH` after the virtual environment exists.
 
 ## Notable Files
 
-- `cjt`: taskfile discovered by CJTasks.
+- `cjtasks`: taskfile discovered by CJTaskrunner.
 - `.env`: provides `APP_MESSAGE`.
 - `pyproject.toml`: package metadata and console script.
 - `src/demo_app/__main__.py`: module executed by the `run` task.

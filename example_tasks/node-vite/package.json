@@ -1,5 +1,5 @@
 {
-  "name": "cjtasks-node-vite-example",
+  "name": "cjtaskrunner-node-vite-example",
   "private": true,
   "type": "module",
   "scripts": {

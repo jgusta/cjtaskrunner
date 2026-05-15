@@ -1,5 +1,5 @@
 [project]
-name = "cjtasks-python-cli-venv-example"
+name = "cjtaskrunner-python-cli-venv-example"
 version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = []

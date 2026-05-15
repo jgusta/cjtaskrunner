@@ -11,7 +11,7 @@ It is useful for checking command ordering, `.env` values, interpolation, and gi
 
 ## Notable Files
 
-- `cjt`: taskfile discovered by CJTasks.
+- `cjtasks`: taskfile discovered by CJTaskrunner.
 - `.env`: sets `GIBBERISH_FILE` and `COMMIT_MESSAGE_FILE`.
 - `scripts/generate-gibberish.sh`: writes sample file content.
 - `scripts/write-commit-message.sh`: writes the commit message file.

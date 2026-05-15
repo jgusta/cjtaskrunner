@@ -1,6 +1,6 @@
 env:
-  GIT_AUTHOR_NAME?: CJTasks Example
-  GIT_AUTHOR_EMAIL?: cjtasks@example.invalid
+  GIT_AUTHOR_NAME?: CJTaskrunner Example
+  GIT_AUTHOR_EMAIL?: cjtaskrunner@example.invalid
 
 base:
   test -f scripts/generate-gibberish.sh

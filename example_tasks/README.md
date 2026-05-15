@@ -1,6 +1,6 @@
-# CJTasks Example Projects
+# CJTaskrunner Example Projects
 
-These directories are small example projects that show how `cj` runs project-local taskfiles named `cjt` or `cjtasks`.
+These directories are small example projects that show how `cj` runs project-local taskfiles named `cjtasks` or ending in `.cjtasks`.
 
 From the repository root, run examples like:
 
@@ -25,7 +25,7 @@ cd example_tasks/rust-cli
 cj check
 ```
 
-CJTasks behavior demonstrated here:
+CJTaskrunner behavior demonstrated here:
 
 - Commands run from the taskfile directory, even when `cj` is invoked from elsewhere.
 - `.env` is loaded from the taskfile directory only.

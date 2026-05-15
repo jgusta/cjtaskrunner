@@ -1,10 +1,10 @@
 # Docker Basic Example
 
-This example demonstrates Docker-oriented tasks in a project that uses the `cjtasks` filename instead of `cjt`. It also shows `.env` loading for container configuration.
+This example demonstrates Docker-oriented tasks in a project that uses the `cjtasks` filename as the default taskfile name. It also shows `.env` loading for container configuration.
 
 ## Notable Files
 
-- `cjtasks`: taskfile discovered by CJTasks.
+- `cjtasks`: taskfile discovered by CJTaskrunner.
 - `.env`: provides `APP_PORT` and `APP_MESSAGE`.
 - `Dockerfile`: image definition for the tiny Python HTTP server.
 - `compose.yaml`: Docker Compose entrypoint for the same app.

@@ -10,7 +10,7 @@ def window_title() -> str:
 
 def main() -> None:
     app = QApplication(sys.argv)
-    label = QLabel("Hello from a PySide6 CJTasks example")
+    label = QLabel("Hello from a PySide6 CJTaskrunner example")
     label.setWindowTitle(window_title())
     label.resize(360, 120)
     label.show()

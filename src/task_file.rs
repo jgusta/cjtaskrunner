@@ -185,7 +185,7 @@ fn validate_directive_syntax(text: &str, path: &Path, line_number: usize) -> CjR
             return Err(line_error(
                 path,
                 line_number,
-                "CJTasks directives do not use trailing ':'",
+                "CJTaskrunner directives do not use trailing ':'",
             ));
         }
     }

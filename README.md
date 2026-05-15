@@ -1,8 +1,10 @@
-# CJTasks
+# CJTaskrunner
 
-CJTasks is a small Rust task runner with the executable name `cj`. It runs named tasks from a project-local taskfile named `cjt` or `cjtasks`, merges environment values in a predictable order, loads a local `.env`, and makes Python virtual environments easier to use by adjusting `PATH`.
+CJTaskrunner is a small Rust task runner with executable names `cj` and `cjtaskrunner`. It runs named tasks from a project-local taskfile, usually named `cjtasks`. If a taskfile needs an extension, or if a project has more than one taskfile, use the `.cjtasks` extension.
 
-The taskfile format is intentionally small: ordinary task lines run commands directly by default, while CJTasks behavior is written with explicit `@` directives.
+The taskfile format is intentionally small: ordinary task lines run commands directly by default, while CJTaskrunner behavior is written with explicit `@` directives.
+
+See `SPEC.md` for the canonical cjtasks format specification.
 
 ## Install, Build, and Run
 
@@ -17,6 +19,7 @@ Run it through Cargo:
 ```sh
 cargo run -- <task>
 cargo run -- <taskfile-or-directory> <task>
+cargo run --bin cjtaskrunner -- <task>
 ```
 
 Run an example from the repository root:
@@ -38,28 +41,32 @@ Then run:
 ```sh
 cj <task>
 cj <taskfile-or-directory> <task>
+cjtaskrunner <task>
+cjtaskrunner <taskfile-or-directory> <task>
 ```
 
 ## Taskfile Discovery
 
-CJTasks recognizes two taskfile names:
+CJTaskrunner recognizes these taskfile forms:
 
-- `cjt`
 - `cjtasks`
+- `*.cjtasks`
 
 Discovery is deliberately local:
 
 - `cj <task>` looks only in the current directory.
 - `cj <directory> <task>` looks only in the given directory.
-- `cj <taskfile> <task>` uses that exact file, but the file must be named `cjt` or `cjtasks`.
-- If both `cjt` and `cjtasks` exist in a searched directory, `cjt` wins.
+- `cj <taskfile> <task>` uses that exact file, but the file must be named `cjtasks` or use the `.cjtasks` extension.
+- If `cjtasks` exists in a searched directory, it wins.
+- If no `cjtasks` file exists and exactly one `*.cjtasks` file exists, CJTaskrunner uses that file.
+- If multiple `*.cjtasks` files exist, pass the intended taskfile path explicitly.
 - Commands always run with the taskfile's directory as the working directory.
 
 There is no parent-directory search in the current MVP.
 
 ## Taskfile Syntax
 
-The format is CJTasks-specific and YAML-like, but not general YAML. Top-level keys end with `:`. Indented entries must use exactly two spaces.
+The format is CJTaskrunner-specific and YAML-like, but not general YAML. Top-level keys end with `:`. Indented entries must use exactly two spaces.
 
 ```yaml
 env:
@@ -80,9 +87,10 @@ dist:
 
 Tasks:
 
-- Task names are ASCII letters and digits only, such as `build`, `test`, or `test123`.
+- Task names are ASCII letters, digits, hyphens, and underscores, such as `build`, `test123`, or `build-prod`.
 - `env` is reserved for the global environment section.
 - Each non-empty command line under a task runs in order.
+- Semicolons split multiple expressions on one physical line at the same indentation level. Semicolons inside quotes are preserved.
 - Ordinary command lines are split into argv and executed directly.
 - Shell syntax requires `@shell`.
 - Standard input, output, and error are inherited.
@@ -92,9 +100,9 @@ Tasks:
 Directives:
 
 - Directive lines start with `@`.
-- Directives do not use trailing colons.
+- Most directives do not use trailing colons. `@set NAME:` is the block-capture form.
 - Nested directive bodies use another two spaces of indentation.
-- Supported control directives are `@task`, `@shell`, `@set`, `@export`, `@unset`, `@if`, `@else`, `@switch`, `@case`, and `@default`.
+- Supported directives are `@task`, `@shell`, `@echo`, `@clean`, `@stop`, `@set`, `@export`, `@unset`, `@return`, `@success`, `@fail`, `@and`, `@or`, `@if`, `@else`, `@switch`, `@case`, and `@default`.
 
 Comments and blank lines:
 
@@ -139,7 +147,7 @@ On Unix-like systems, `@shell` uses `/bin/sh -c`.
 
 ## Interpolation
 
-CJTasks interpolates variables in ordinary command argv tokens, `@shell` command text, and directive arguments.
+CJTaskrunner interpolates variables in ordinary command argv tokens, `@shell` command text, and directive arguments.
 
 Supported forms:
 
@@ -151,14 +159,14 @@ ${NAME:-fallback}
 
 Rules:
 
-- `$NAME` and `${NAME}` read the current CJTasks variable value.
+- `$NAME` and `${NAME}` read the current CJTaskrunner variable value.
 - `${NAME:-fallback}` uses `fallback` when `NAME` is missing or empty.
 - Missing variables without a fallback are errors.
 - Interpolated values in ordinary command lines stay one argv value. If `NAME` is `-p dir/mydir`, then `mkdir $NAME` passes one argument with that exact value; it does not become two arguments.
 - Interpolated values in `@shell` are quoted before shell execution.
 - Escape literal interpolation with `\$NAME` or `\${NAME}`.
 
-CJTasks does not support command substitution, arithmetic expansion, pattern replacement, or nested expansion.
+CJTaskrunner does not support shell-style command substitution, arithmetic expansion, pattern replacement, or nested expansion. Use `@set NAME:` when you need to capture task output into a variable.
 
 ## Task Composition
 
@@ -180,7 +188,7 @@ build:
   cargo build
 ```
 
-`@task name` uses CJTasks semantics directly. The called task runs with the same taskfile, base directory, and effective variable state. Execution stops if the called task fails, and recursive task cycles are reported as errors.
+`@task name` uses CJTaskrunner semantics directly. The called task runs with the same taskfile, base directory, and effective variable state. Execution stops if the called task fails, and recursive task cycles are reported as errors.
 
 ## Runtime Variables
 
@@ -201,12 +209,64 @@ build:
 
 Runtime variable directives:
 
-- `@set NAME value` sets a CJTasks variable for later interpolation and directives, but does not export it to child processes.
+- `@set NAME value` sets a CJTaskrunner variable for later interpolation and directives, but does not export it to child processes.
+- `@set NAME:` runs an indented block and stores its captured stdout in `NAME`. Trailing newlines are trimmed.
 - `@export NAME` exports the current variable value to later child processes.
 - `@export NAME value` sets and exports a value in one step.
 - `@unset NAME` removes the variable and removes any later export overlay for that name.
 
 Runtime state is order-dependent and shared with composed tasks. Changes made inside a task called with `@task` remain visible after that task returns.
+
+Capture example:
+
+```yaml
+capture:
+  @set RESULT:
+    @shell printf "build-%s" "$MODE"
+  @echo $RESULT
+```
+
+The capture block uses the same task semantics as normal execution, but child stdout and `@echo` output are collected instead of inherited.
+
+## Utility and Status Directives
+
+Use `@echo`, `@clean`, and `@stop` for common task-runner behavior without dropping into shell:
+
+```yaml
+clean:
+  @clean dist
+  @echo cleaned
+
+guard:
+  @if-missing package.json
+    @stop missing package.json
+```
+
+Utility directives:
+
+- `@echo text` writes text plus a newline to stdout after interpolation.
+- `@clean path` removes one file or directory relative to the taskfile directory. Missing paths are ok.
+- `@stop text` writes text plus a newline when provided, then stops the current flow with status `1`.
+- `@return value` writes `value` without adding a newline and returns a status derived from it: `true` is `0`, `false` is `1`, numeric values are that status code, other truthy strings are `0`, and empty/`0`/`false` values are `1`.
+- `@return` with an indented block runs that block and returns its status.
+- `@success` returns status `0`.
+- `@fail` returns status `1`.
+
+Status chains are inspired by fish-style `and`/`or` flow:
+
+```yaml
+build-or-clean:
+  @task build; @and
+    @echo build ok
+  @or
+    @clean dist
+    @echo cleaned after failed build
+```
+
+- `@and` runs its indented block only when previous expression returned status `0`.
+- `@or` runs its indented block only when previous expression returned non-zero.
+- A failed expression can be followed by same-level `@or`; otherwise execution stops on non-zero status.
+- Skipped `@and` returns status `1`; skipped `@or` returns status `0`.
 
 ## Conditionals and Switches
 
@@ -261,7 +321,7 @@ serve:
 
 ## Environment and .env Behavior
 
-For every task, CJTasks builds the child environment in this order:
+For every task, CJTaskrunner builds the child environment in this order:
 
 1. Start with the current `cj` process environment.
 2. Load `.env` from the taskfile directory, adding only variables that are absent.
@@ -273,7 +333,7 @@ The `.env` parser accepts `NAME=value` lines, ignores blank lines and comment-on
 
 ## Python Virtual Environment Behavior
 
-CJTasks can prepend a virtualenv executable directory to `PATH`.
+CJTaskrunner can prepend a virtualenv executable directory to `PATH`.
 
 Detection order:
 
@@ -282,7 +342,7 @@ Detection order:
 3. Else use `.venv` under the taskfile directory when it exists.
 4. Else leave Python paths alone.
 
-On Unix-like systems, the selected virtualenv contributes `<venv>/bin` to the front of `PATH`, and `VIRTUAL_ENV` is set to the selected directory. If a selected virtualenv exists without a `bin` directory, CJTasks returns an error instead of silently continuing.
+On Unix-like systems, the selected virtualenv contributes `<venv>/bin` to the front of `PATH`, and `VIRTUAL_ENV` is set to the selected directory. If a selected virtualenv exists without a `bin` directory, CJTaskrunner returns an error instead of silently continuing.
 
 ## Examples
 
@@ -310,6 +370,19 @@ Some example tasks intentionally require external tools or dependencies, such as
 
 Existing example taskfiles were originally written against the shell-per-line MVP. Commands that use redirects, globbing, command chaining, quoted shell variables, or shell builtins should be converted to `@shell` or direct argv-safe interpolation when using the round 2 execution model.
 
+## Source Layout
+
+The Rust source is grouped by CJTaskrunner feature area:
+
+- `src/cli.rs`: invocation, taskfile discovery, base directory selection.
+- `src/task_file.rs`: taskfile parsing, syntax validation, semicolon splitting.
+- `src/environment.rs`: `.env`, taskfile env merge, Python virtualenv path handling.
+- `src/runner.rs`: task and block execution.
+- `src/directives.rs`: CJTaskrunner directives and control flow.
+- `src/command_text.rs`: word splitting, interpolation, child process execution.
+
+`src/lib.rs` keeps shared types and includes the feature files in one private namespace.
+
 ## Current Limitations
 
 - No command-line flags.
@@ -322,3 +395,4 @@ Existing example taskfiles were originally written against the shell-per-line MV
 - No general YAML parsing.
 - No variable expansion in `.env` values.
 - No `.env.local` or parent `.env` discovery.
+- No full expression AST; control flow is still line and block based.
