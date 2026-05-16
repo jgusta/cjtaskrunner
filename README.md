@@ -23,6 +23,7 @@ cargo build --bin cjtaskrunner-lsp
 Run it through Cargo:
 
 ```sh
+cargo run --
 cargo run -- <task>
 cargo run -- <taskfile-or-directory> <task>
 cargo run --bin cjtaskrunner -- <task>
@@ -45,8 +46,10 @@ cargo install --path .
 Then run:
 
 ```sh
+cj
 cj <task>
 cj <taskfile-or-directory> <task>
+cjtaskrunner
 cjtaskrunner <task>
 cjtaskrunner <taskfile-or-directory> <task>
 ```
@@ -69,6 +72,8 @@ Current LSP capabilities:
 
 The LSP is stdio-based. Configure editors to run `cjtaskrunner-lsp` for files named `cjtasks` and `*.cjtasks`.
 
+The repository also includes a local VS Code extension in `editors/vscode-cjtaskrunner`. It provides language support and an Explorer `CJTaskrunner` view that discovers `cjtasks` / `*.cjtasks` files and runs tasks in a terminal.
+
 ## Taskfile Discovery
 
 CJTaskrunner recognizes these taskfile forms:
@@ -84,7 +89,7 @@ Discovery is deliberately local:
 - If `cjtasks` exists in a searched directory, it wins.
 - If no `cjtasks` file exists and exactly one `*.cjtasks` file exists, CJTaskrunner uses that file.
 - If multiple `*.cjtasks` files exist, pass the intended taskfile path explicitly.
-- Commands always run with the taskfile's directory as the working directory.
+- Tasks start with the taskfile's directory as the working directory.
 
 There is no parent-directory search in the current MVP.
 
@@ -126,7 +131,7 @@ Directives:
 - Directive lines start with `@`.
 - Most directives do not use trailing colons. `@set NAME:` is the block-capture form.
 - Nested directive bodies use another two spaces of indentation.
-- Supported directives are `@task`, `@shell`, `@echo`, `@clean`, `@stop`, `@set`, `@export`, `@unset`, `@return`, `@success`, `@fail`, `@and`, `@or`, `@if`, `@else`, `@switch`, `@case`, and `@default`.
+- Supported directives are `@task`, `@shell`, `@desc`, `@cd`, `@back`, `@echo`, `@clean`, `@stop`, `@set`, `@export`, `@unset`, `@return`, `@success`, `@fail`, `@and`, `@or`, `@if`, `@else`, `@switch`, `@case`, and `@default`.
 
 Comments and blank lines:
 
@@ -194,6 +199,14 @@ CJTaskrunner does not support shell-style command substitution, arithmetic expan
 
 ## Task Composition
 
+Run `cj` or `cjtaskrunner` with no task name to list tasks in the detected taskfile. Direct `@desc` lines under each task are shown when present:
+
+```yaml
+build:
+  @desc compile project
+  cargo build
+```
+
 Use `@task` to run another task from the same taskfile:
 
 ```yaml
@@ -212,7 +225,25 @@ build:
   cargo build
 ```
 
-`@task name` uses CJTaskrunner semantics directly. The called task runs with the same taskfile, base directory, and effective variable state. Execution stops if the called task fails, and recursive task cycles are reported as errors.
+`@task name` uses CJTaskrunner semantics directly. The called task runs with the same taskfile, current working directory, and effective variable state. Directory changes made inside the called task reset after it returns. Execution stops if the called task fails, and recursive task cycles are reported as errors.
+
+## Working Directory
+
+Tasks start in the selected taskfile's directory. Use `@cd` and `@back` to manage the current working directory without shell state:
+
+```yaml
+docs:
+  @cd site
+  npm run build
+  @back
+  @shell pwd
+```
+
+- `@cd path` changes the current working directory. Relative paths resolve from the current working directory.
+- `@back` undoes one `@cd`, but never moves above the directory where the current task or nested block started.
+- Directory changes persist for later commands in the same block.
+- Nested blocks inherit the parent directory and restore their starting directory when the block ends.
+- `@task` calls inherit the current directory and restore it when the called task returns.
 
 ## Runtime Variables
 
@@ -269,7 +300,7 @@ guard:
 Utility directives:
 
 - `@echo text` writes text plus a newline to stdout after interpolation.
-- `@clean path` removes one file or directory relative to the taskfile directory. Missing paths are ok.
+- `@clean path` removes one file or directory relative to the current working directory. Missing paths are ok.
 - `@stop text` writes text plus a newline when provided, then stops the current flow with status `1`.
 - `@return value` writes `value` without adding a newline and returns a status derived from it: `true` is `0`, `false` is `1`, numeric values are that status code, other truthy strings are `0`, and empty/`0`/`false` values are `1`.
 - `@return` with an indented block runs that block and returns its status.
@@ -324,7 +355,7 @@ Supported conditional forms:
 @else
 ```
 
-Paths in `@if-exists` and `@if-missing` are relative to the taskfile directory. String comparisons are literal after interpolation.
+Paths in `@if-exists` and `@if-missing` are relative to the current working directory. String comparisons are literal after interpolation.
 
 Use `@switch`, `@case`, and `@default` for one-of-many branching:
 

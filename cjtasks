@@ -1,0 +1,6 @@
+build-extension:
+  @desc build the lsp and editor 
+  cargo build --bin cjtaskrunner-lsp
+  @cd editors/vscode-cjtaskrunner
+  npm install
+  npm run compile

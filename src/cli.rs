@@ -3,21 +3,40 @@ pub fn run_cli(args: &[String]) -> CjResult<i32> {
 }
 
 fn run_cli_from_cwd(args: &[String], cwd: &Path) -> CjResult<i32> {
-    let (task_file, task_name) = resolve_invocation_from(args, cwd)?;
+    let (task_file, task_name) = match resolve_invocation_from(args, cwd)? {
+        Invocation::List { task_file } => return list_tasks(&task_file),
+        Invocation::Run {
+            task_file,
+            task_name,
+        } => (task_file, task_name),
+    };
     let base_dir = task_file_base_dir(&task_file);
     let parsed = parse_task_file_path(&task_file)?;
     let mut env = RuntimeEnv::new(build_effective_env(base_dir, &parsed.env)?);
+    let mut cwd = CwdState::new(base_dir);
 
-    run_task(base_dir, &parsed, &task_name, &mut env, &mut Vec::new())
+    run_task(&parsed, &task_name, &mut env, &mut cwd, &mut Vec::new())
 }
 
-fn resolve_invocation_from(args: &[String], cwd: &Path) -> CjResult<(PathBuf, String)> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Invocation {
+    List { task_file: PathBuf },
+    Run { task_file: PathBuf, task_name: String },
+}
+
+fn resolve_invocation_from(args: &[String], cwd: &Path) -> CjResult<Invocation> {
     match args.len() {
+        0 => Ok(Invocation::List {
+            task_file: discover_task_file(cwd)?,
+        }),
         1 => {
             let task_name = args[0].clone();
             validate_task_name(&task_name)
                 .map_err(|err| CjError::new(format!("invalid task name '{task_name}': {err}")))?;
-            Ok((discover_task_file(cwd)?, task_name))
+            Ok(Invocation::Run {
+                task_file: discover_task_file(cwd)?,
+                task_name,
+            })
         }
         2 => {
             let raw_target = PathBuf::from(&args[0]);
@@ -31,10 +50,16 @@ fn resolve_invocation_from(args: &[String], cwd: &Path) -> CjResult<(PathBuf, St
                 .map_err(|err| CjError::new(format!("invalid task name '{task_name}': {err}")))?;
 
             if target.is_dir() {
-                Ok((discover_task_file(&target)?, task_name))
+                Ok(Invocation::Run {
+                    task_file: discover_task_file(&target)?,
+                    task_name,
+                })
             } else if target.is_file() {
                 if is_recognized_task_file(&target) {
-                    Ok((target, task_name))
+                    Ok(Invocation::Run {
+                        task_file: target,
+                        task_name,
+                    })
                 } else {
                     Err(CjError::new(format!(
                         "taskfile must be named 'cjtasks' or use the '.cjtasks' extension: {}",
@@ -54,9 +79,23 @@ fn resolve_invocation_from(args: &[String], cwd: &Path) -> CjResult<(PathBuf, St
             }
         }
         _ => Err(CjError::new(
-            "usage: cj <task> | cj <taskfile-or-directory> <task>",
+            "usage: cj | cj <task> | cj <taskfile-or-directory> <task>",
         )),
     }
+}
+
+fn list_tasks(task_file: &Path) -> CjResult<i32> {
+    let parsed = parse_task_file_path(task_file)?;
+
+    println!("Tasks in {}:", task_file.display());
+    for name in &parsed.task_order {
+        if let Some(description) = parsed.descriptions.get(name) {
+            println!("  {name:<20} {description}");
+        } else {
+            println!("  {name}");
+        }
+    }
+    Ok(0)
 }
 
 fn discover_task_file(dir: &Path) -> CjResult<PathBuf> {

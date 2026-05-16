@@ -9,10 +9,13 @@ use tower_lsp::{Client, LanguageServer, LspService, Server};
 const DIRECTIVES: &[(&str, &str)] = &[
     ("shell", "Run command through /bin/sh -c on Unix."),
     ("task", "Run another task from same taskfile."),
+    ("desc", "Describe task for listings and editor task views."),
+    ("cd", "Change working directory for current scope."),
+    ("back", "Undo one @cd within current scope."),
     ("echo", "Write text plus newline to stdout."),
     (
         "clean",
-        "Remove file or directory relative to taskfile directory.",
+        "Remove file or directory relative to current working directory.",
     ),
     ("stop", "Write optional text, then stop with status 1."),
     (
@@ -61,6 +64,7 @@ struct Analysis {
 struct TaskDef {
     name: String,
     range: Range,
+    description: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -160,7 +164,10 @@ impl LanguageServer for Backend {
             .filter_map(|name| document.analysis.tasks.get(name))
             .map(|task| DocumentSymbol {
                 name: task.name.clone(),
-                detail: Some("task".to_string()),
+                detail: task
+                    .description
+                    .clone()
+                    .or_else(|| Some("task".to_string())),
                 kind: SymbolKind::FUNCTION,
                 tags: None,
                 deprecated: None,
@@ -344,6 +351,7 @@ fn analyze(text: &str) -> Analysis {
                             TaskDef {
                                 name: key.clone(),
                                 range,
+                                description: None,
                             },
                         );
                     }
@@ -397,6 +405,9 @@ fn analyze(text: &str) -> Analysis {
                 }
                 let text = &line[indent..];
                 for expression in super::split_line_expressions(text) {
+                    if indent == 2 {
+                        record_description(&mut analysis, current_task.as_deref(), &expression);
+                    }
                     analyze_task_expression(&mut analysis, line_number, indent, &expression);
                 }
             }
@@ -413,6 +424,21 @@ fn analyze(text: &str) -> Analysis {
     }
 
     analysis
+}
+
+fn record_description(analysis: &mut Analysis, current_task: Option<&str>, expression: &str) {
+    let Some(task_name) = current_task else {
+        return;
+    };
+    let Some(args) = expression.strip_prefix("@desc") else {
+        return;
+    };
+    if !args.is_empty() && !args.starts_with(char::is_whitespace) {
+        return;
+    }
+    if let Some(task) = analysis.tasks.get_mut(task_name) {
+        task.description = Some(args.trim().to_string());
+    }
 }
 
 fn parse_top_level_lsp(line: &str) -> std::result::Result<String, &'static str> {
@@ -515,7 +541,7 @@ fn analyze_task_expression(
                 );
             }
         }
-        "clean" | "if-exists" | "if-missing" | "switch" | "case" => {
+        "cd" | "clean" | "if-exists" | "if-missing" | "switch" | "case" => {
             if arg_count(args) != Some(1) {
                 push_diagnostic(
                     analysis,
@@ -542,7 +568,19 @@ fn analyze_task_expression(
         },
         "set" => analyze_set_args(analysis, line_number, indent, expression, args),
         "export" => analyze_export_args(analysis, line_number, indent, expression, args),
+        "desc" => {}
         "default" | "success" | "fail" => {
+            if !args.trim().is_empty() {
+                push_diagnostic(
+                    analysis,
+                    line_number,
+                    indent,
+                    indent + expression.len(),
+                    &format!("@{name} does not take arguments"),
+                );
+            }
+        }
+        "back" => {
             if !args.trim().is_empty() {
                 push_diagnostic(
                     analysis,

@@ -7,7 +7,7 @@ This project demonstrates a local git workflow:
 3. write a commit message,
 4. commit the result.
 
-It is useful for checking command ordering, `.env` values, interpolation, and git commands that use taskfile fallback environment values. Lines that depend on shell variable quoting or shell scripts should be written with `@shell` under the round 2 syntax.
+It is useful for checking command ordering, `.env` values, interpolation, executable scripts with shebangs, and git commands that use taskfile fallback environment values.
 
 ## Notable Files
 
@@ -47,4 +47,4 @@ cargo run -- example_tasks/git-gibberish commit
 
 ## Prerequisites and Caveats
 
-These tasks expect Git and `sh` to be available. `initrepo`, `gibberish`, `message`, `commit`, and `all` intentionally mutate this example directory by creating `.git` data and generated text files. The `commit` task uses local `git -c user.name=... -c user.email=...` values, so it does not depend on global git identity.
+These tasks expect Git and a Unix-like environment capable of running executable `#!/bin/sh` scripts. `initrepo`, `gibberish`, `message`, `commit`, and `all` intentionally mutate this example directory by creating `.git` data and generated text files. The `commit` task uses local `git -c user.name=... -c user.email=...` values, so it does not depend on global git identity.

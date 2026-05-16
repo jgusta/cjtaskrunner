@@ -1,8 +1,8 @@
 fn run_task(
-    base_dir: &Path,
     task_file: &TaskFile,
     task_name: &str,
     effective_env: &mut RuntimeEnv,
+    cwd: &mut CwdState,
     stack: &mut Vec<String>,
 ) -> CjResult<i32> {
     validate_task_name(task_name)
@@ -22,13 +22,13 @@ fn run_task(
         .ok_or_else(|| CjError::new(format!("task not found: {task_name}")))?;
     stack.push(task_name.to_string());
     let result = execute_block(
-        base_dir,
         task_file,
         lines,
         0,
         lines.len(),
         2,
         effective_env,
+        cwd,
         stack,
         OutputMode::Inherit,
     );
@@ -37,90 +37,97 @@ fn run_task(
 }
 
 fn execute_block(
-    base_dir: &Path,
     task_file: &TaskFile,
     lines: &[TaskLine],
     start: usize,
     end: usize,
     indent: usize,
     effective_env: &mut RuntimeEnv,
+    cwd: &mut CwdState,
     stack: &mut Vec<String>,
     output_mode: OutputMode,
 ) -> CjResult<i32> {
-    let mut index = start;
-    let mut previous_status = 0;
-    while index < end {
-        let line = &lines[index];
-        if line.indent < indent {
-            break;
-        }
-        if line.indent > indent {
-            return Err(CjError::new(format!(
-                "line {}: unexpected indentation",
-                line.line_number
-            )));
-        }
+    cwd.push_scope();
+    let result = (|| {
+        let mut index = start;
+        let mut previous_status = 0;
+        loop {
+            if index >= end {
+                break Ok(previous_status);
+            }
+            let line = &lines[index];
+            if line.indent < indent {
+                break Ok(previous_status);
+            }
+            if line.indent > indent {
+                break Err(CjError::new(format!(
+                    "line {}: unexpected indentation",
+                    line.line_number
+                )));
+            }
 
-        if let Some(rest) = line.text.strip_prefix('@') {
-            let (name, _) = split_directive(rest);
-            if name == "and" || name == "or" {
-                let status = execute_chain_directive(
-                    base_dir,
+            if let Some(rest) = line.text.strip_prefix('@') {
+                let (name, _) = split_directive(rest);
+                if name == "and" || name == "or" {
+                    let status = execute_chain_directive(
+                        task_file,
+                        lines,
+                        &mut index,
+                        end,
+                        indent,
+                        name,
+                        previous_status,
+                        effective_env,
+                        cwd,
+                        stack,
+                        output_mode,
+                    )?;
+                    previous_status = status;
+                    if status != 0 && !next_directive_is(lines, index, end, indent, "or") {
+                        break Ok(status);
+                    }
+                    continue;
+                }
+                let status = execute_directive(
                     task_file,
                     lines,
                     &mut index,
                     end,
                     indent,
-                    name,
-                    previous_status,
+                    rest,
                     effective_env,
+                    cwd,
                     stack,
                     output_mode,
                 )?;
                 previous_status = status;
-                if status != 0 && !next_directive_is(lines, index, end, indent, "or") {
-                    return Ok(status);
+                if status != 0 {
+                    if next_directive_is(lines, index, end, indent, "or") {
+                        continue;
+                    }
+                    break Ok(status);
                 }
-                continue;
-            }
-            let status = execute_directive(
-                base_dir,
-                task_file,
-                lines,
-                &mut index,
-                end,
-                indent,
-                rest,
-                effective_env,
-                stack,
-                output_mode,
-            )?;
-            previous_status = status;
-            if status != 0 {
-                if next_directive_is(lines, index, end, indent, "or") {
-                    continue;
+            } else {
+                let result =
+                    run_direct_command(cwd.current(), &line.text, effective_env, output_mode)?;
+                index += 1;
+                previous_status = result.status;
+                if result.status != 0 {
+                    if next_directive_is(lines, index, end, indent, "or") {
+                        continue;
+                    }
+                    break Ok(result.status);
                 }
-                return Ok(status);
-            }
-        } else {
-            let result = run_direct_command(base_dir, &line.text, effective_env, output_mode)?;
-            index += 1;
-            previous_status = result.status;
-            if result.status != 0 {
-                if next_directive_is(lines, index, end, indent, "or") {
-                    continue;
-                }
-                return Ok(result.status);
             }
         }
-    }
+    })();
 
-    Ok(previous_status)
+    cwd.pop_scope();
+    result
 }
 
 #[allow(clippy::too_many_arguments)]
 fn execute_chain_directive(
-    base_dir: &Path,
     task_file: &TaskFile,
     lines: &[TaskLine],
     index: &mut usize,
@@ -129,6 +136,7 @@ fn execute_chain_directive(
     name: &str,
     previous_status: i32,
     effective_env: &mut RuntimeEnv,
+    cwd: &mut CwdState,
     stack: &mut Vec<String>,
     output_mode: OutputMode,
 ) -> CjResult<i32> {
@@ -147,13 +155,13 @@ fn execute_chain_directive(
         (name == "and" && previous_status == 0) || (name == "or" && previous_status != 0);
     if should_run {
         execute_block(
-            base_dir,
             task_file,
             lines,
             block_start,
             block_end,
             indent + 2,
             effective_env,
+            cwd,
             stack,
             output_mode,
         )
@@ -183,24 +191,24 @@ fn next_directive_is(
 
 #[allow(clippy::too_many_arguments)]
 fn execute_block_capture(
-    base_dir: &Path,
     task_file: &TaskFile,
     lines: &[TaskLine],
     start: usize,
     end: usize,
     indent: usize,
     effective_env: &mut RuntimeEnv,
+    cwd: &mut CwdState,
     stack: &mut Vec<String>,
 ) -> CjResult<String> {
     CAPTURED_OUTPUT.with(|captured| captured.borrow_mut().clear());
     let status = execute_block(
-        base_dir,
         task_file,
         lines,
         start,
         end,
         indent,
         effective_env,
+        cwd,
         stack,
         OutputMode::Capture,
     )?;

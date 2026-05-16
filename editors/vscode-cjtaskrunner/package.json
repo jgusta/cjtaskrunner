@@ -9,10 +9,16 @@
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Other"
   ],
   "activationEvents": [
-    "onLanguage:cjtasks"
+    "onLanguage:cjtasks",
+    "onView:cjtaskrunner.tasks",
+    "onCommand:cjtaskrunner.refreshTasks",
+    "onCommand:cjtaskrunner.runTask",
+    "workspaceContains:cjtasks",
+    "workspaceContains:*.cjtasks"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -39,9 +45,50 @@
         "path": "./syntaxes/cjtasks.tmLanguage.json"
       }
     ],
+    "views": {
+      "explorer": [
+        {
+          "id": "cjtaskrunner.tasks",
+          "name": "CJTaskrunner"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "cjtaskrunner.refreshTasks",
+        "title": "Refresh Tasks",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "cjtaskrunner.runTask",
+        "title": "Run Task",
+        "icon": "$(play)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "cjtaskrunner.refreshTasks",
+          "when": "view == cjtaskrunner.tasks",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "cjtaskrunner.runTask",
+          "when": "view == cjtaskrunner.tasks && viewItem == cjtaskrunner.task",
+          "group": "inline"
+        }
+      ]
+    },
     "configuration": {
       "title": "CJTaskrunner",
       "properties": {
+        "cjtaskrunner.executable.path": {
+          "type": "string",
+          "default": "",
+          "description": "Path to cj or cjtaskrunner. Empty uses ../../target/debug/cjtaskrunner relative to this extension."
+        },
         "cjtaskrunner.lsp.path": {
           "type": "string",
           "default": "",

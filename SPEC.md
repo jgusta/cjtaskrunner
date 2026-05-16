@@ -38,7 +38,7 @@ When discovering inside a directory:
 
 Discovery does not search parent directories.
 
-Commands always run with the selected taskfile's directory as the working directory.
+Tasks start with the selected taskfile's directory as the working directory.
 
 ## File Format
 
@@ -198,6 +198,16 @@ bundle:
 
 Runs the interpolated command through `/bin/sh -c` on Unix.
 
+### `@desc`
+
+```yaml
+build:
+  @desc compile project
+  cargo build
+```
+
+Defines task description metadata. `cj` and `cjtaskrunner` show it when run without a task name. `@desc` does not run a command.
+
 ### `@task`
 
 ```yaml
@@ -206,9 +216,28 @@ ci:
   @task test
 ```
 
-Runs another task from the same taskfile with the same base directory and runtime variable state.
+Runs another task from the same taskfile with the current working directory and runtime variable state.
 
 Recursive task cycles are errors.
+
+The called task inherits the current working directory. Directory changes made inside the called task reset when it returns.
+
+### `@cd`, `@back`
+
+```yaml
+build-docs:
+  @cd docs
+  npm run build
+  @back
+```
+
+- `@cd path` changes the current working directory.
+- Relative `@cd` paths resolve from the current working directory.
+- `@back` undoes one `@cd` in the current scope.
+- `@back` does nothing at the root directory for the current scope.
+- Directory changes persist for later commands in the same block.
+- Nested blocks inherit the parent directory and restore their starting directory when the block ends.
+- Tasks inherit the caller's current directory and restore their starting directory when they return.
 
 ### `@set`, `@export`, `@unset`
 
@@ -248,7 +277,7 @@ clean:
 ```
 
 - `@echo text` writes text plus newline to stdout after interpolation.
-- `@clean path` removes one file or directory relative to the taskfile directory. Missing paths are not errors.
+- `@clean path` removes one file or directory relative to the current working directory. Missing paths are not errors.
 - `@stop text` writes text plus newline when text is provided, then returns status `1`.
 
 ### `@return`, `@success`, `@fail`
@@ -312,7 +341,7 @@ Supported forms:
 
 Truthiness: empty string, `0`, and `false` are false. Other values are true.
 
-Paths in `@if-exists` and `@if-missing` are relative to the taskfile directory.
+Paths in `@if-exists` and `@if-missing` are relative to the current working directory.
 
 ### Switches
 

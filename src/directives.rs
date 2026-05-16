@@ -1,6 +1,5 @@
 #[allow(clippy::too_many_arguments)]
 fn execute_directive(
-    base_dir: &Path,
     task_file: &TaskFile,
     lines: &[TaskLine],
     index: &mut usize,
@@ -8,6 +7,7 @@ fn execute_directive(
     indent: usize,
     directive: &str,
     effective_env: &mut RuntimeEnv,
+    cwd: &mut CwdState,
     stack: &mut Vec<String>,
     output_mode: OutputMode,
 ) -> CjResult<i32> {
@@ -16,7 +16,7 @@ fn execute_directive(
         "shell" => {
             let command = interpolate_shell_text(args, effective_env)?;
             *index += 1;
-            run_shell_command(base_dir, &command, effective_env, output_mode)
+            run_shell_command(cwd.current(), &command, effective_env, output_mode)
                 .map(|result| result.status)
         }
         "task" => {
@@ -28,7 +28,42 @@ fn execute_directive(
                 )));
             }
             *index += 1;
-            run_task(base_dir, task_file, &argv[0], effective_env, stack)
+            run_task(task_file, &argv[0], effective_env, cwd, stack)
+        }
+        "cd" => {
+            let argv = interpolate_argv(args, &effective_env.vars)?;
+            if argv.len() != 1 {
+                return Err(CjError::new(format!(
+                    "line {}: @cd expects exactly one path",
+                    lines[*index].line_number
+                )));
+            }
+            let next = cwd.current().join(&argv[0]);
+            if !next.is_dir() {
+                return Err(CjError::new(format!(
+                    "line {}: @cd path is not a directory: {}",
+                    lines[*index].line_number,
+                    next.display()
+                )));
+            }
+            cwd.cd(next);
+            *index += 1;
+            Ok(0)
+        }
+        "back" => {
+            if !args.trim().is_empty() {
+                return Err(CjError::new(format!(
+                    "line {}: @back does not take arguments",
+                    lines[*index].line_number
+                )));
+            }
+            cwd.back();
+            *index += 1;
+            Ok(0)
+        }
+        "desc" => {
+            *index += 1;
+            Ok(0)
         }
         "echo" => {
             let value = interpolate_text(args, &effective_env.vars, QuoteMode::None)?;
@@ -44,7 +79,7 @@ fn execute_directive(
                     lines[*index].line_number
                 )));
             }
-            let path = base_dir.join(&argv[0]);
+            let path = cwd.current().join(&argv[0]);
             if path.is_dir() {
                 fs::remove_dir_all(&path)?;
             } else if path.exists() {
@@ -74,13 +109,13 @@ fn execute_directive(
             let block_end = find_block_end(lines, block_start, end, indent);
             if block_start < block_end {
                 let status = execute_block(
-                    base_dir,
                     task_file,
                     lines,
                     block_start,
                     block_end,
                     indent + 2,
                     effective_env,
+                    cwd,
                     stack,
                     output_mode,
                 )?;
@@ -103,13 +138,13 @@ fn execute_directive(
                 if block_start < block_end && is_set_capture_args(args) {
                     let key = parse_set_capture_name(args, lines[*index].line_number)?;
                     let value = execute_block_capture(
-                        base_dir,
                         task_file,
                         lines,
                         block_start,
                         block_end,
                         indent + 2,
                         effective_env,
+                        cwd,
                         stack,
                     )?;
                     effective_env.vars.insert(key, value);
@@ -148,7 +183,6 @@ fn execute_directive(
             Ok(0)
         }
         "if" | "if-exists" | "if-missing" | "if-set" | "if-unset" => execute_if_directive(
-            base_dir,
             task_file,
             lines,
             index,
@@ -157,6 +191,7 @@ fn execute_directive(
             name,
             args,
             effective_env,
+            cwd,
             stack,
             output_mode,
         ),
@@ -165,7 +200,6 @@ fn execute_directive(
             lines[*index].line_number
         ))),
         "switch" => execute_switch_directive(
-            base_dir,
             task_file,
             lines,
             index,
@@ -173,6 +207,7 @@ fn execute_directive(
             indent,
             args,
             effective_env,
+            cwd,
             stack,
             output_mode,
         ),
@@ -193,7 +228,6 @@ fn execute_directive(
 
 #[allow(clippy::too_many_arguments)]
 fn execute_if_directive(
-    base_dir: &Path,
     task_file: &TaskFile,
     lines: &[TaskLine],
     index: &mut usize,
@@ -202,10 +236,11 @@ fn execute_if_directive(
     name: &str,
     args: &str,
     effective_env: &mut RuntimeEnv,
+    cwd: &mut CwdState,
     stack: &mut Vec<String>,
     output_mode: OutputMode,
 ) -> CjResult<i32> {
-    let condition = evaluate_condition(base_dir, name, args, effective_env)?;
+    let condition = evaluate_condition(cwd.current(), name, args, effective_env)?;
     let then_start = *index + 1;
     let then_end = find_block_end(lines, then_start, end, indent);
     let mut else_range = None;
@@ -221,25 +256,25 @@ fn execute_if_directive(
 
     if condition {
         execute_block(
-            base_dir,
             task_file,
             lines,
             then_start,
             then_end,
             indent + 2,
             effective_env,
+            cwd,
             stack,
             output_mode,
         )
     } else if let Some((else_start, else_end)) = else_range {
         execute_block(
-            base_dir,
             task_file,
             lines,
             else_start,
             else_end,
             indent + 2,
             effective_env,
+            cwd,
             stack,
             output_mode,
         )
@@ -250,7 +285,6 @@ fn execute_if_directive(
 
 #[allow(clippy::too_many_arguments)]
 fn execute_switch_directive(
-    base_dir: &Path,
     task_file: &TaskFile,
     lines: &[TaskLine],
     index: &mut usize,
@@ -258,6 +292,7 @@ fn execute_switch_directive(
     indent: usize,
     args: &str,
     effective_env: &mut RuntimeEnv,
+    cwd: &mut CwdState,
     stack: &mut Vec<String>,
     output_mode: OutputMode,
 ) -> CjResult<i32> {
@@ -327,13 +362,13 @@ fn execute_switch_directive(
     *index = switch_end;
     if let Some((start, end)) = selected.or(default) {
         execute_block(
-            base_dir,
             task_file,
             lines,
             start,
             end,
             body_indent,
             effective_env,
+            cwd,
             stack,
             output_mode,
         )

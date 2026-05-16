@@ -7,6 +7,8 @@ fn parse_task_file_path(path: &Path) -> CjResult<TaskFile> {
 pub fn parse_task_file(source: &str, path: &Path) -> CjResult<TaskFile> {
     let mut env = EnvEntries::default();
     let mut tasks: HashMap<String, Vec<TaskLine>> = HashMap::new();
+    let mut descriptions: HashMap<String, String> = HashMap::new();
+    let mut task_order = Vec::new();
     let mut section = Section::Top;
     let mut current_task: Option<String> = None;
     let mut seen_env = false;
@@ -48,6 +50,7 @@ pub fn parse_task_file(source: &str, path: &Path) -> CjResult<TaskFile> {
                         format!("duplicate task '{key}'"),
                     ));
                 }
+                task_order.push(key.clone());
                 tasks.insert(key.clone(), Vec::new());
                 current_task = Some(key);
                 section = Section::Task;
@@ -84,6 +87,12 @@ pub fn parse_task_file(source: &str, path: &Path) -> CjResult<TaskFile> {
                     continue;
                 }
                 validate_directive_syntax(text, path, line_number)?;
+                if indent == 2 {
+                    if let Some(description) = parse_description(text) {
+                        descriptions.insert(task_name.clone(), description.to_string());
+                        continue;
+                    }
+                }
                 let task = tasks.get_mut(task_name).expect("current task must exist");
                 for text in split_line_expressions(text) {
                     task.push(TaskLine {
@@ -103,7 +112,20 @@ pub fn parse_task_file(source: &str, path: &Path) -> CjResult<TaskFile> {
         }
     }
 
-    Ok(TaskFile { env, tasks })
+    Ok(TaskFile {
+        env,
+        tasks,
+        descriptions,
+        task_order,
+    })
+}
+
+fn parse_description(text: &str) -> Option<&str> {
+    let args = text.strip_prefix("@desc")?;
+    if !args.is_empty() && !args.starts_with(char::is_whitespace) {
+        return None;
+    }
+    Some(args.trim())
 }
 
 fn split_line_expressions(text: &str) -> Vec<String> {

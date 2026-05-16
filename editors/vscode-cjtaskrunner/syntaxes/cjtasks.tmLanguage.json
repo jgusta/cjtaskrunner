@@ -40,7 +40,7 @@
       "patterns": [
         {
           "name": "keyword.control.directive.cjtasks",
-          "match": "@(?:shell|task|echo|clean|stop|set|export|unset|return|success|fail|and|or|if|else|if-exists|if-missing|if-set|if-unset|switch|case|default)\\b"
+          "match": "@(?:shell|task|desc|cd|back|echo|clean|stop|set|export|unset|return|success|fail|and|or|if|else|if-exists|if-missing|if-set|if-unset|switch|case|default)\\b"
         }
       ]
     },

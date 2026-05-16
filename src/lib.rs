@@ -44,6 +44,8 @@ thread_local! {
 pub struct TaskFile {
     env: EnvEntries,
     tasks: HashMap<String, Vec<TaskLine>>,
+    descriptions: HashMap<String, String>,
+    task_order: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -99,6 +101,61 @@ impl RuntimeEnv {
     }
 }
 
+#[derive(Debug, Clone)]
+struct CwdState {
+    current: PathBuf,
+    history: Vec<PathBuf>,
+    scopes: Vec<CwdScope>,
+}
+
+#[derive(Debug, Clone)]
+struct CwdScope {
+    start: PathBuf,
+    floor: usize,
+}
+
+impl CwdState {
+    fn new(base_dir: &Path) -> Self {
+        Self {
+            current: base_dir.to_path_buf(),
+            history: Vec::new(),
+            scopes: Vec::new(),
+        }
+    }
+
+    fn current(&self) -> &Path {
+        &self.current
+    }
+
+    fn push_scope(&mut self) {
+        self.scopes.push(CwdScope {
+            start: self.current.clone(),
+            floor: self.history.len(),
+        });
+    }
+
+    fn pop_scope(&mut self) {
+        if let Some(scope) = self.scopes.pop() {
+            self.current = scope.start;
+            self.history.truncate(scope.floor);
+        }
+    }
+
+    fn cd(&mut self, path: PathBuf) {
+        self.history.push(self.current.clone());
+        self.current = path;
+    }
+
+    fn back(&mut self) {
+        let floor = self.scopes.last().map_or(0, |scope| scope.floor);
+        if self.history.len() > floor {
+            if let Some(previous) = self.history.pop() {
+                self.current = previous;
+            }
+        }
+    }
+}
+
 include!("cli.rs");
 include!("task_file.rs");
 include!("environment.rs");
@@ -129,6 +186,16 @@ mod tests {
         )]))
     }
 
+    fn run_task_from_dir(
+        dir: &Path,
+        parsed: &TaskFile,
+        task_name: &str,
+        env: &mut RuntimeEnv,
+    ) -> CjResult<i32> {
+        let mut cwd = CwdState::new(dir);
+        run_task(parsed, task_name, env, &mut cwd, &mut Vec::new())
+    }
+
     #[test]
     fn parses_env_and_tasks() {
         let path = Path::new("cjtasks");
@@ -141,6 +208,7 @@ env:
   EMPTY:
 
 dev:
+  @desc start development server
   echo # retained
 
 test123:
@@ -153,6 +221,8 @@ test123:
         assert_eq!(parsed.env.overrides["NODE_ENV"], "development");
         assert_eq!(parsed.env.overrides["EMPTY"], "");
         assert_eq!(parsed.env.fallbacks["PORT"], "5173");
+        assert_eq!(parsed.task_order, vec!["dev", "test123"]);
+        assert_eq!(parsed.descriptions["dev"], "start development server");
         assert_eq!(parsed.tasks["dev"][0].text, "echo # retained");
         assert_eq!(parsed.tasks["test123"][0].text, "cargo test");
     }
@@ -282,7 +352,7 @@ test123:
         env.vars
             .insert("CJTEST_VALUE".to_string(), "a b; echo injected".to_string());
 
-        let code = run_task(&dir, &parsed, "run", &mut env, &mut Vec::new()).expect("run");
+        let code = run_task_from_dir(&dir, &parsed, "run", &mut env).expect("run");
         assert_eq!(code, 0);
 
         fs::remove_dir_all(dir).expect("cleanup");
@@ -301,7 +371,7 @@ test123:
         env.vars
             .insert("CJTEST_VALUE".to_string(), "safe; echo bad".to_string());
 
-        let code = run_task(&dir, &parsed, "run", &mut env, &mut Vec::new()).expect("run");
+        let code = run_task_from_dir(&dir, &parsed, "run", &mut env).expect("run");
         assert_eq!(code, 0);
         assert_eq!(
             fs::read_to_string(dir.join("out.txt")).expect("out"),
@@ -322,12 +392,12 @@ test123:
         fs::create_dir_all(&dir).expect("mkdir");
         let mut env = minimal_env();
         assert_eq!(
-            run_task(&dir, &parsed, "first", &mut env, &mut Vec::new()).expect("run"),
+            run_task_from_dir(&dir, &parsed, "first", &mut env).expect("run"),
             0
         );
 
-        let err = run_task(&dir, &parsed, "cycle", &mut env, &mut Vec::new())
-            .expect_err("cycle should fail");
+        let err =
+            run_task_from_dir(&dir, &parsed, "cycle", &mut env).expect_err("cycle should fail");
         assert!(err.to_string().contains("recursive @task cycle"));
         fs::remove_dir_all(dir).expect("cleanup");
     }
@@ -364,7 +434,7 @@ test123:
         .expect("parse");
         let mut env = minimal_env();
 
-        let code = run_task(&dir, &parsed, "run", &mut env, &mut Vec::new()).expect("run");
+        let code = run_task_from_dir(&dir, &parsed, "run", &mut env).expect("run");
         assert_eq!(code, 0);
         assert_eq!(fs::read_to_string(dir.join("if.txt")).expect("if"), "yes");
         assert_eq!(
@@ -399,7 +469,7 @@ test123:
         .expect("parse");
         let mut env = minimal_env();
 
-        let code = run_task(&dir, &parsed, "run", &mut env, &mut Vec::new()).expect("run");
+        let code = run_task_from_dir(&dir, &parsed, "run", &mut env).expect("run");
         assert_eq!(code, 0);
         assert_eq!(
             fs::read_to_string(dir.join("before.txt")).expect("before"),
@@ -447,13 +517,13 @@ test123:
         .expect("parse");
         let mut env = minimal_env();
 
-        let code = run_task(&dir, &parsed, "run", &mut env, &mut Vec::new()).expect("run");
+        let code = run_task_from_dir(&dir, &parsed, "run", &mut env).expect("run");
         assert_eq!(code, 0);
         assert!(!dir.join("stale.txt").exists());
 
         let parsed =
             parse_task_file("run:\n  @stop nope\n  true\n", Path::new("cjtasks")).expect("parse");
-        let code = run_task(&dir, &parsed, "run", &mut env, &mut Vec::new()).expect("run");
+        let code = run_task_from_dir(&dir, &parsed, "run", &mut env).expect("run");
         assert_eq!(code, 1);
 
         fs::remove_dir_all(dir).expect("cleanup");
@@ -474,9 +544,152 @@ test123:
         .expect("parse");
         let mut env = minimal_env();
 
-        let code = run_task(&dir, &parsed, "run", &mut env, &mut Vec::new()).expect("run");
+        let code = run_task_from_dir(&dir, &parsed, "run", &mut env).expect("run");
         assert_eq!(code, 0);
         assert_eq!(env.vars["RESULT"], "captured");
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn cd_and_back_manage_scoped_working_directories() {
+        let dir = test_path("cd");
+        fs::create_dir_all(dir.join("sub/child")).expect("mkdir");
+        let parsed = parse_task_file(
+            r#"run:
+  @shell pwd > root.txt
+  @cd sub
+  @shell pwd > sub.txt
+  @if true
+    @cd child
+    @shell pwd > child.txt
+  @shell pwd > after-block.txt
+  @back
+  @shell pwd > after-back.txt
+  @back
+  @shell pwd > after-extra-back.txt
+"#,
+            Path::new("cjtasks"),
+        )
+        .expect("parse");
+        let mut env = minimal_env();
+
+        let code = run_task_from_dir(&dir, &parsed, "run", &mut env).expect("run");
+        assert_eq!(code, 0);
+
+        let canonical_dir = fs::canonicalize(&dir).expect("dir");
+        let canonical_sub = fs::canonicalize(dir.join("sub")).expect("sub");
+        let canonical_child = fs::canonicalize(dir.join("sub/child")).expect("child");
+
+        assert_eq!(
+            fs::canonicalize(
+                fs::read_to_string(dir.join("root.txt"))
+                    .expect("root")
+                    .trim()
+            )
+            .expect("root pwd"),
+            canonical_dir
+        );
+        assert_eq!(
+            fs::canonicalize(
+                fs::read_to_string(dir.join("sub/sub.txt"))
+                    .expect("sub")
+                    .trim()
+            )
+            .expect("sub pwd"),
+            canonical_sub
+        );
+        assert_eq!(
+            fs::canonicalize(
+                fs::read_to_string(dir.join("sub/child/child.txt"))
+                    .expect("child")
+                    .trim()
+            )
+            .expect("child pwd"),
+            canonical_child
+        );
+        assert_eq!(
+            fs::canonicalize(
+                fs::read_to_string(dir.join("sub/after-block.txt"))
+                    .expect("after block")
+                    .trim()
+            )
+            .expect("after block pwd"),
+            canonical_sub
+        );
+        assert_eq!(
+            fs::canonicalize(
+                fs::read_to_string(dir.join("after-back.txt"))
+                    .expect("after back")
+                    .trim()
+            )
+            .expect("after back pwd"),
+            canonical_dir
+        );
+        assert_eq!(
+            fs::canonicalize(
+                fs::read_to_string(dir.join("after-extra-back.txt"))
+                    .expect("after extra back")
+                    .trim()
+            )
+            .expect("after extra back pwd"),
+            canonical_dir
+        );
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn task_inherits_current_directory_and_restores_after_return() {
+        let dir = test_path("cd-task");
+        fs::create_dir_all(dir.join("sub/child")).expect("mkdir");
+        let parsed = parse_task_file(
+            r#"run:
+  @cd sub
+  @task write
+  @shell pwd > after-task.txt
+write:
+  @shell pwd > task-start.txt
+  @cd child
+  @shell pwd > task-child.txt
+"#,
+            Path::new("cjtasks"),
+        )
+        .expect("parse");
+        let mut env = minimal_env();
+
+        let code = run_task_from_dir(&dir, &parsed, "run", &mut env).expect("run");
+        assert_eq!(code, 0);
+
+        let canonical_sub = fs::canonicalize(dir.join("sub")).expect("sub");
+        let canonical_child = fs::canonicalize(dir.join("sub/child")).expect("child");
+        assert_eq!(
+            fs::canonicalize(
+                fs::read_to_string(dir.join("sub/task-start.txt"))
+                    .expect("task start")
+                    .trim()
+            )
+            .expect("task start pwd"),
+            canonical_sub
+        );
+        assert_eq!(
+            fs::canonicalize(
+                fs::read_to_string(dir.join("sub/child/task-child.txt"))
+                    .expect("task child")
+                    .trim()
+            )
+            .expect("task child pwd"),
+            canonical_child
+        );
+        assert_eq!(
+            fs::canonicalize(
+                fs::read_to_string(dir.join("sub/after-task.txt"))
+                    .expect("after task")
+                    .trim()
+            )
+            .expect("after task pwd"),
+            canonical_sub
+        );
 
         fs::remove_dir_all(dir).expect("cleanup");
     }
@@ -488,8 +701,21 @@ test123:
         fs::write(dir.join("cjtasks"), "run:\n  true\n").expect("write cjtasks");
 
         let resolved = resolve_invocation_from(&["run".to_string()], &dir).expect("resolve");
-        assert_eq!(resolved.0.file_name().unwrap(), "cjtasks");
-        assert_eq!(resolved.1, "run");
+        assert_eq!(
+            resolved,
+            Invocation::Run {
+                task_file: dir.join("cjtasks"),
+                task_name: "run".to_string()
+            }
+        );
+
+        let listed = resolve_invocation_from(&[], &dir).expect("resolve list");
+        assert_eq!(
+            listed,
+            Invocation::List {
+                task_file: dir.join("cjtasks")
+            }
+        );
 
         fs::remove_dir_all(dir).expect("cleanup");
     }
@@ -506,7 +732,13 @@ test123:
             &dir,
         )
         .expect("resolve dir");
-        assert_eq!(from_dir.0.file_name().unwrap(), "cjtasks");
+        assert_eq!(
+            from_dir,
+            Invocation::Run {
+                task_file: dir.join("cjtasks"),
+                task_name: "run".to_string()
+            }
+        );
 
         let from_file = resolve_invocation_from(
             &[
@@ -516,7 +748,13 @@ test123:
             &dir,
         )
         .expect("resolve file");
-        assert_eq!(from_file.0, dir.join("cjtasks"));
+        assert_eq!(
+            from_file,
+            Invocation::Run {
+                task_file: dir.join("cjtasks"),
+                task_name: "run".to_string()
+            }
+        );
 
         let from_extension = resolve_invocation_from(
             &[
@@ -526,7 +764,13 @@ test123:
             &dir,
         )
         .expect("resolve extension file");
-        assert_eq!(from_extension.0, dir.join("build.cjtasks"));
+        assert_eq!(
+            from_extension,
+            Invocation::Run {
+                task_file: dir.join("build.cjtasks"),
+                task_name: "run".to_string()
+            }
+        );
 
         fs::remove_dir_all(dir).expect("cleanup");
     }
@@ -564,6 +808,22 @@ test123:
             fs::canonicalize(reported.trim()).expect("reported pwd"),
             fs::canonicalize(&dir).expect("dir")
         );
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn no_args_lists_discovered_tasks() {
+        let dir = test_path("list-tasks");
+        fs::create_dir_all(&dir).expect("mkdir");
+        fs::write(
+            dir.join("cjtasks"),
+            "build:\n  @desc compile project\n  true\n",
+        )
+        .expect("write cjtasks");
+
+        let code = run_cli_from_cwd(&[], &dir).expect("list");
+        assert_eq!(code, 0);
 
         fs::remove_dir_all(dir).expect("cleanup");
     }
