@@ -1092,6 +1092,23 @@ write:
     }
 
     #[test]
+    fn completions_command_prints_supported_shells() {
+        let code = run_cli_from_cwd(
+            &["--completions".to_string(), "fish".to_string()],
+            Path::new("."),
+        )
+        .expect("completions");
+        assert_eq!(code, 0);
+
+        let err = run_cli_from_cwd(
+            &["--completions".to_string(), "powershell".to_string()],
+            Path::new("."),
+        )
+        .expect_err("unsupported shell");
+        assert!(err.to_string().contains("unsupported shell"));
+    }
+
+    #[test]
     fn selected_venv_requires_bin_directory() {
         let dir = test_path("bad-venv");
         fs::create_dir_all(dir.join(".venv")).expect("mkdir");

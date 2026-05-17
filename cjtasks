@@ -12,6 +12,22 @@ format-cjtasks:
   @desc format root cjtasks file
   cargo run -- --format cjtasks
 
+install-completions:
+  @desc install shell completions for current shell
+  @if $SHELL == /bin/zsh
+    cargo run -- --install-completions zsh
+  @else
+    @if $SHELL == /bin/bash
+      cargo run -- --install-completions bash
+    @else
+      @if $SHELL == /opt/homebrew/bin/fish
+        cargo run -- --install-completions fish
+      @else
+        @if $SHELL == /usr/local/bin/fish
+          cargo run -- --install-completions fish
+        @else
+          @stop unsupported shell: $SHELL
+
 extension-deps:
   @desc install vs code extension dependencies
   @cd editors/vscode-cjtaskrunner

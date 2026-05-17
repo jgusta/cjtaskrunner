@@ -44,6 +44,12 @@ Tasks start with the selected taskfile's directory as the working directory.
 
 `cj --format [taskfile-or-directory]` formats a taskfile in place. The formatter is line-preserving: it trims trailing whitespace, expands indentation tabs to spaces, normalizes indentation to even widths, and preserves comments, blank lines, and task order.
 
+## Shell Completions
+
+`cj --completions <bash|zsh|fish>` prints shell completions.
+
+`cj --install-completions <bash|zsh|fish>` writes completions to the user's default shell completion directory.
+
 ## File Format
 
 The format is line-oriented and YAML-like, but not general YAML.

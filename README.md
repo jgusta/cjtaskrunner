@@ -34,6 +34,8 @@ cargo run -- -d
 cargo run -- <task>
 cargo run -- <taskfile-or-directory> <task>
 cargo run -- --format [taskfile-or-directory]
+cargo run -- --completions <bash|zsh|fish>
+cargo run -- --install-completions <bash|zsh|fish>
 cargo run --bin cjtaskrunner -- <task>
 ```
 
@@ -61,6 +63,8 @@ cj -d
 cj <task>
 cj <taskfile-or-directory> <task>
 cj --format [taskfile-or-directory]
+cj --completions <bash|zsh|fish>
+cj --install-completions <bash|zsh|fish>
 cjtaskrunner
 cjtaskrunner <task>
 cjtaskrunner <taskfile-or-directory> <task>
@@ -97,6 +101,32 @@ cj --format path/to/project
 ```
 
 The formatter is line-preserving. It trims trailing whitespace, expands indentation tabs to spaces, normalizes indentation to even widths, and preserves comments, blank lines, and task order. The LSP also provides document formatting for editors.
+
+## Shell Completions
+
+Print completion scripts:
+
+```sh
+cj --completions zsh
+cj --completions bash
+cj --completions fish
+```
+
+Install completions to user-level default locations:
+
+```sh
+cj --install-completions zsh
+cj --install-completions bash
+cj --install-completions fish
+```
+
+Install paths:
+
+- zsh: `~/.zfunc/_cj`
+- bash: `~/.local/share/bash-completion/completions/cj`
+- fish: `~/.config/fish/completions/cj.fish`
+
+For zsh, ensure `~/.zfunc` is in `fpath` and `compinit` runs from your shell config.
 
 ## Taskfile Discovery
 

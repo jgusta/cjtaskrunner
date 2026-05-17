@@ -8,6 +8,20 @@ fn run_cli_from_cwd(args: &[String], cwd: &Path) -> CjResult<i32> {
         return Ok(0);
     }
 
+    if args.first().is_some_and(|arg| arg == "--completions") {
+        let shell = parse_shell_arg(&args[1..], "--completions")?;
+        print_completions(shell);
+        return Ok(0);
+    }
+
+    if args
+        .first()
+        .is_some_and(|arg| arg == "--install-completions")
+    {
+        let shell = parse_shell_arg(&args[1..], "--install-completions")?;
+        return install_completions(shell);
+    }
+
     if args.first().is_some_and(|arg| arg == "--format") {
         let task_file = resolve_format_target(&args[1..], cwd)?;
         return format_task_file_in_place(&task_file);
@@ -126,6 +140,8 @@ Usage:
   cj --default [taskfile-or-directory]
   cj -d [taskfile-or-directory]
   cj --format [taskfile-or-directory]
+  cj --completions <bash|zsh|fish>
+  cj --install-completions <bash|zsh|fish>
 
 No task name lists tasks in the detected taskfile.
 Use --default or -d to run the default task.
@@ -133,6 +149,204 @@ Use cj help to show taskfile help.
 "
     );
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CompletionShell {
+    Bash,
+    Zsh,
+    Fish,
+}
+
+fn parse_shell_arg(args: &[String], command: &str) -> CjResult<CompletionShell> {
+    if args.len() != 1 {
+        return Err(CjError::new(format!(
+            "usage: cj {command} <bash|zsh|fish>"
+        )));
+    }
+    match args[0].as_str() {
+        "bash" => Ok(CompletionShell::Bash),
+        "zsh" => Ok(CompletionShell::Zsh),
+        "fish" => Ok(CompletionShell::Fish),
+        shell => Err(CjError::new(format!(
+            "unsupported shell '{shell}'; expected bash, zsh, or fish"
+        ))),
+    }
+}
+
+fn print_completions(shell: CompletionShell) {
+    print!("{}", completion_script(shell));
+}
+
+fn install_completions(shell: CompletionShell) -> CjResult<i32> {
+    let path = completion_install_path(shell)?;
+    let parent = path
+        .parent()
+        .ok_or_else(|| CjError::new(format!("invalid completion path: {}", path.display())))?;
+    fs::create_dir_all(parent)?;
+    fs::write(&path, completion_script(shell))
+        .map_err(|err| CjError::new(format!("failed to write {}: {err}", path.display())))?;
+    println!("installed completions to {}", path.display());
+    Ok(0)
+}
+
+fn completion_install_path(shell: CompletionShell) -> CjResult<PathBuf> {
+    Ok(match shell {
+        CompletionShell::Bash => xdg_data_home()?.join("bash-completion/completions/cj"),
+        CompletionShell::Zsh => xdg_data_home()?.join("zsh/site-functions/_cj"),
+        CompletionShell::Fish => xdg_config_home()?.join("fish/completions/cj.fish"),
+    })
+}
+
+fn xdg_data_home() -> CjResult<PathBuf> {
+    if let Some(path) = non_empty_os_env("XDG_DATA_HOME") {
+        return Ok(PathBuf::from(path));
+    }
+    Ok(home_dir()?.join(".local/share"))
+}
+
+fn xdg_config_home() -> CjResult<PathBuf> {
+    if let Some(path) = non_empty_os_env("XDG_CONFIG_HOME") {
+        return Ok(PathBuf::from(path));
+    }
+    Ok(home_dir()?.join(".config"))
+}
+
+fn home_dir() -> CjResult<PathBuf> {
+    env::var_os("HOME")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .ok_or_else(|| CjError::new("HOME is not set"))
+}
+
+fn non_empty_os_env(key: &str) -> Option<std::ffi::OsString> {
+    env::var_os(key).filter(|value| !value.is_empty())
+}
+
+fn completion_script(shell: CompletionShell) -> &'static str {
+    match shell {
+        CompletionShell::Bash => BASH_COMPLETIONS,
+        CompletionShell::Zsh => ZSH_COMPLETIONS,
+        CompletionShell::Fish => FISH_COMPLETIONS,
+    }
+}
+
+const BASH_COMPLETIONS: &str = r#"_cj_tasks() {
+  cj 2>/dev/null | awk '
+    /^  [A-Za-z0-9_-]+(:[A-Za-z0-9_-]+)?/ { print $1 }
+  '
+}
+
+_cj_help_sections() {
+  cj 2>/dev/null | awk '
+    $0 == "Help available:" { help = 1; next }
+    help && /^  / { print $1 }
+  '
+}
+
+_cj() {
+  local cur prev
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+  if [[ "$prev" == "--completions" || "$prev" == "--install-completions" ]]; then
+    COMPREPLY=( $(compgen -W "bash zsh fish" -- "$cur") )
+    return 0
+  fi
+
+  if [[ "${COMP_WORDS[1]}" == "help" && "$COMP_CWORD" -eq 2 ]]; then
+    COMPREPLY=( $(compgen -W "$(_cj_help_sections)" -- "$cur") )
+    return 0
+  fi
+
+  if [[ "$COMP_CWORD" -eq 1 ]]; then
+    COMPREPLY=( $(compgen -W "--help --default -d --format --completions --install-completions help $(_cj_tasks)" -- "$cur") )
+    return 0
+  fi
+
+  if [[ "$prev" == "--format" || "$prev" == "--default" || "$prev" == "-d" ]]; then
+    compopt -o default 2>/dev/null
+    return 0
+  fi
+
+  COMPREPLY=( $(compgen -W "$(_cj_tasks)" -- "$cur") )
+}
+
+complete -F _cj cj
+complete -F _cj cjtaskrunner
+"#;
+
+const ZSH_COMPLETIONS: &str = r#"#compdef cj cjtaskrunner
+
+_cj_tasks() {
+  cj 2>/dev/null | awk '/^  [A-Za-z0-9_-]+(:[A-Za-z0-9_-]+)?/ { print $1 }'
+}
+
+_cj_help_sections() {
+  cj 2>/dev/null | awk '$0 == "Help available:" { help = 1; next } help && /^  / { print $1 }'
+}
+
+_cj() {
+  local -a commands shells tasks help_sections
+  commands=(--help --default -d --format --completions --install-completions help)
+  shells=(bash zsh fish)
+  tasks=(${(f)"$(_cj_tasks)"})
+  help_sections=(${(f)"$(_cj_help_sections)"})
+
+  if (( CURRENT > 2 )) && [[ ${words[CURRENT-1]} == "--completions" || ${words[CURRENT-1]} == "--install-completions" ]]; then
+    _describe 'shell' shells
+    return
+  fi
+
+  if [[ ${words[2]} == "help" && $CURRENT -eq 3 ]]; then
+    _describe 'help section' help_sections
+    return
+  fi
+
+  if (( CURRENT == 2 )); then
+    _describe 'command' commands
+    _describe 'task' tasks
+    return
+  fi
+
+  if [[ ${words[CURRENT-1]} == "--format" || ${words[CURRENT-1]} == "--default" || ${words[CURRENT-1]} == "-d" ]]; then
+    _files
+    return
+  fi
+
+  _describe 'task' tasks
+}
+
+_cj "$@"
+"#;
+
+const FISH_COMPLETIONS: &str = r#"function __cj_tasks
+    cj 2>/dev/null | awk '/^  [A-Za-z0-9_-]+(:[A-Za-z0-9_-]+)?/ { print $1 }'
+end
+
+function __cj_help_sections
+    cj 2>/dev/null | awk '$0 == "Help available:" { help = 1; next } help && /^  / { print $1 }'
+end
+
+complete -c cj -f -n '__fish_use_subcommand' -a '(__cj_tasks)' -d 'Task'
+complete -c cjtaskrunner -f -n '__fish_use_subcommand' -a '(__cj_tasks)' -d 'Task'
+
+complete -c cj -f -n '__fish_use_subcommand' -a 'help' -d 'Show taskfile help'
+complete -c cjtaskrunner -f -n '__fish_use_subcommand' -a 'help' -d 'Show taskfile help'
+complete -c cj -f -n '__fish_seen_subcommand_from help' -a '(__cj_help_sections)' -d 'Help section'
+complete -c cjtaskrunner -f -n '__fish_seen_subcommand_from help' -a '(__cj_help_sections)' -d 'Help section'
+
+complete -c cj -l help -d 'Show CLI help'
+complete -c cjtaskrunner -l help -d 'Show CLI help'
+complete -c cj -l default -s d -r -d 'Run default task'
+complete -c cjtaskrunner -l default -s d -r -d 'Run default task'
+complete -c cj -l format -r -d 'Format taskfile'
+complete -c cjtaskrunner -l format -r -d 'Format taskfile'
+complete -c cj -l completions -f -a 'bash zsh fish' -d 'Print shell completions'
+complete -c cjtaskrunner -l completions -f -a 'bash zsh fish' -d 'Print shell completions'
+complete -c cj -l install-completions -f -a 'bash zsh fish' -d 'Install shell completions'
+complete -c cjtaskrunner -l install-completions -f -a 'bash zsh fish' -d 'Install shell completions'
+"#;
 
 fn resolve_help_invocation(args: &[String], cwd: &Path) -> CjResult<(PathBuf, Option<String>)> {
     match args.len() {
