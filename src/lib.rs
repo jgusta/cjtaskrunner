@@ -38,7 +38,16 @@ type CjResult<T> = Result<T, CjError>;
 const MAX_EXECUTION_STEPS: usize = 100_000;
 
 thread_local! {
-    static CAPTURED_OUTPUT: RefCell<String> = const { RefCell::new(String::new()) };
+    static CAPTURED_OUTPUT: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+}
+
+fn append_captured_output(value: &str) {
+    CAPTURED_OUTPUT.with(|captured| {
+        let mut captured = captured.borrow_mut();
+        if let Some(active) = captured.last_mut() {
+            active.push_str(value);
+        }
+    });
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -589,6 +598,49 @@ build:dev:
         let code = run_task_from_dir(&dir, &parsed, "run", &mut env).expect("run");
         assert_eq!(code, 0);
         assert_eq!(env.vars["RESULT"], "captured");
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn nested_set_capture_preserves_outer_capture_buffer() {
+        let dir = test_path("nested-capture");
+        fs::create_dir_all(&dir).expect("mkdir");
+        let parsed = parse_task_file(
+            r#"run:
+  @set OUT:
+    @echo before
+    @set INNER:
+      @echo inner
+    @echo after
+"#,
+            Path::new("cjtasks"),
+        )
+        .expect("parse");
+        let mut env = minimal_env();
+
+        let code = run_task_from_dir(&dir, &parsed, "run", &mut env).expect("run");
+        assert_eq!(code, 0);
+        assert_eq!(env.vars["INNER"], "inner");
+        assert_eq!(env.vars["OUT"], "before\nafter");
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn set_block_capture_requires_colon() {
+        let dir = test_path("capture-colon");
+        fs::create_dir_all(&dir).expect("mkdir");
+        let parsed = parse_task_file(
+            "run:\n  @set OUT\n    @echo captured\n",
+            Path::new("cjtasks"),
+        )
+        .expect("parse");
+        let mut env = minimal_env();
+
+        let err = run_task_from_dir(&dir, &parsed, "run", &mut env)
+            .expect_err("missing colon should fail");
+        assert!(err.to_string().contains("@set expects NAME and value"));
 
         fs::remove_dir_all(dir).expect("cleanup");
     }

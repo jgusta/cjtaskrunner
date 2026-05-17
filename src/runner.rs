@@ -36,6 +36,7 @@ fn run_task(
     result
 }
 
+#[allow(clippy::too_many_arguments)]
 fn execute_block(
     task_file: &TaskFile,
     lines: &[TaskLine],
@@ -206,7 +207,7 @@ fn execute_block_capture(
     cwd: &mut CwdState,
     stack: &mut Vec<String>,
 ) -> CjResult<String> {
-    CAPTURED_OUTPUT.with(|captured| captured.borrow_mut().clear());
+    CAPTURED_OUTPUT.with(|captured| captured.borrow_mut().push(String::new()));
     let status = execute_block(
         task_file,
         lines,
@@ -218,7 +219,7 @@ fn execute_block_capture(
         stack,
         OutputMode::Capture,
     )?;
-    let output = CAPTURED_OUTPUT.with(|captured| captured.borrow().clone());
+    let output = CAPTURED_OUTPUT.with(|captured| captured.borrow_mut().pop().unwrap_or_default());
     if status == 0 {
         Ok(output.trim_end_matches(['\r', '\n']).to_string())
     } else {

@@ -222,7 +222,7 @@ async function readTasks(uri: vscode.Uri): Promise<TaskEntry[]> {
         continue;
       }
       const name = line.slice(0, -1);
-      if (name !== "env" && name !== "help" && /^[A-Za-z0-9_.-]+(?::[A-Za-z0-9_.-]+)?$/.test(name)) {
+      if (name !== "env" && name !== "help" && /^[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)?$/.test(name)) {
         currentTask = { name };
         tasks.push(currentTask);
       } else {

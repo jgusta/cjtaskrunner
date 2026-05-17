@@ -599,7 +599,8 @@ fn is_truthy(value: &str) -> bool {
 }
 
 fn is_set_capture_args(args: &str) -> bool {
-    split_words(args.trim_end_matches(':')).is_ok_and(|argv| argv.len() == 1)
+    args.trim_end().ends_with(':')
+        && split_words(args.trim_end_matches(':')).is_ok_and(|argv| argv.len() == 1)
 }
 
 fn parse_set_capture_name(args: &str, line_number: usize) -> CjResult<String> {
@@ -637,9 +638,7 @@ fn return_value_status(args: &str, effective_env: &RuntimeEnv) -> CjResult<i32> 
 fn write_output(value: &str, output_mode: OutputMode) {
     match output_mode {
         OutputMode::Inherit => print!("{value}"),
-        OutputMode::Capture => {
-            CAPTURED_OUTPUT.with(|captured| captured.borrow_mut().push_str(value))
-        }
+        OutputMode::Capture => append_captured_output(value),
     }
 }
 

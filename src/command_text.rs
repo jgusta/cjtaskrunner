@@ -56,7 +56,7 @@ fn run_child(mut child: Command, output_mode: OutputMode) -> io::Result<CommandR
         OutputMode::Capture => {
             let output = child.stdout(Stdio::piped()).output()?;
             let text = String::from_utf8_lossy(&output.stdout).to_string();
-            CAPTURED_OUTPUT.with(|captured| captured.borrow_mut().push_str(&text));
+            append_captured_output(&text);
             Ok(CommandResult {
                 status: output.status.code().unwrap_or(1),
                 output: text,
