@@ -1,6 +1,51 @@
-build-extension:
-  @desc build the lsp and editor 
+help:
+  CJTaskrunner development tasks.
+
+  Run `cj` to list tasks.
+  Run `cj help build-extension` for build-extension details.
+
+build-lsp:
+  @desc build lsp
   cargo build --bin cjtaskrunner-lsp
+
+format-cjtasks:
+  @desc format root cjtasks file
+  cargo run -- --format cjtasks
+
+extension-deps:
+  @desc install vs code extension dependencies
   @cd editors/vscode-cjtaskrunner
   npm install
+
+extension-compile:
+  @desc compile vs code extension typescript
+  @cd editors/vscode-cjtaskrunner
   npm run compile
+
+build-extension:
+  @desc build lsp and vs code extension
+  @help:
+    Builds the CJTaskrunner LSP binary, installs VS Code extension dependencies,
+    and compiles the extension TypeScript.
+  @task build-lsp
+  @task extension-deps
+  @task extension-compile
+
+package-extension:
+  @desc build and package vs code extension as vsix
+  @task build-extension
+  @mkdir dist editors/vscode-cjtaskrunner/bin
+  @cp target/debug/cjtaskrunner target/debug/cjtaskrunner-lsp editors/vscode-cjtaskrunner/bin
+  @cd editors/vscode-cjtaskrunner
+  npx @vscode/vsce package --allow-missing-repository --out ../../dist/cjtaskrunner-vscode.vsix
+
+install-extension:
+  @desc build and install vs code extension locally
+  @task package-extension
+  code --install-extension dist/cjtaskrunner-vscode.vsix --force
+
+extension-dev:
+  @desc print vs code extension development steps
+  @echo Run: cj build-extension
+  @echo Open: code editors/vscode-cjtaskrunner
+  @echo Press F5 in VS Code to launch Extension Development Host

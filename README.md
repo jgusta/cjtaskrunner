@@ -6,6 +6,10 @@ The taskfile format is intentionally small: ordinary task lines run commands dir
 
 See `SPEC.md` for the canonical cjtasks format specification.
 
+## License
+
+MIT. Copyright (c) 2026 jgusta.
+
 ## Install, Build, and Run
 
 Build the CLI:
@@ -24,8 +28,12 @@ Run it through Cargo:
 
 ```sh
 cargo run --
+cargo run -- help [section]
+cargo run -- --default
+cargo run -- -d
 cargo run -- <task>
 cargo run -- <taskfile-or-directory> <task>
+cargo run -- --format [taskfile-or-directory]
 cargo run --bin cjtaskrunner -- <task>
 ```
 
@@ -47,8 +55,12 @@ Then run:
 
 ```sh
 cj
+cj help [section]
+cj --default
+cj -d
 cj <task>
 cj <taskfile-or-directory> <task>
+cj --format [taskfile-or-directory]
 cjtaskrunner
 cjtaskrunner <task>
 cjtaskrunner <taskfile-or-directory> <task>
@@ -73,6 +85,18 @@ Current LSP capabilities:
 The LSP is stdio-based. Configure editors to run `cjtaskrunner-lsp` for files named `cjtasks` and `*.cjtasks`.
 
 The repository also includes a local VS Code extension in `editors/vscode-cjtaskrunner`. It provides language support and an Explorer `CJTaskrunner` view that discovers `cjtasks` / `*.cjtasks` files and runs tasks in a terminal.
+
+## Formatting
+
+Format a taskfile in place:
+
+```sh
+cj --format
+cj --format path/to/cjtasks
+cj --format path/to/project
+```
+
+The formatter is line-preserving. It trims trailing whitespace, expands indentation tabs to spaces, normalizes indentation to even widths, and preserves comments, blank lines, and task order. The LSP also provides document formatting for editors.
 
 ## Taskfile Discovery
 
@@ -106,6 +130,12 @@ setup:
   test -f package.json
   test -f src/main.js
 
+build:dev:
+  @desc build dev assets
+  @help:
+    Build development assets.
+  npm run build:dev
+
 dev:
   @task setup
   npm run dev -- --host 127.0.0.1 --port $PORT
@@ -117,13 +147,16 @@ dist:
 Tasks:
 
 - Task names are ASCII letters, digits, hyphens, and underscores, such as `build`, `test123`, or `build-prod`.
-- `env` is reserved for the global environment section.
+- Task names may use one colon for simple grouping, such as `build:dev` or `build:package`.
+- `env` is reserved for the global environment section. `help` is reserved for taskfile help.
+- A task name cannot match a directory in the taskfile directory.
 - Each non-empty command line under a task runs in order.
 - Semicolons split multiple expressions on one physical line at the same indentation level. Semicolons inside quotes are preserved.
 - Ordinary command lines are split into argv and executed directly.
 - Shell syntax requires `@shell`.
 - Standard input, output, and error are inherited.
 - Execution stops at the first command that exits non-zero.
+- Execution stops with an error after 100,000 task steps as possible infinite-loop protection.
 - Each command line is independent, so process working-directory changes and shell-local state do not persist to the next taskfile command line.
 
 Directives:
@@ -131,7 +164,7 @@ Directives:
 - Directive lines start with `@`.
 - Most directives do not use trailing colons. `@set NAME:` is the block-capture form.
 - Nested directive bodies use another two spaces of indentation.
-- Supported directives are `@task`, `@shell`, `@desc`, `@cd`, `@back`, `@echo`, `@clean`, `@stop`, `@set`, `@export`, `@unset`, `@return`, `@success`, `@fail`, `@and`, `@or`, `@if`, `@else`, `@switch`, `@case`, and `@default`.
+- Supported directives are `@task`, `@shell`, `@desc`, `@help:`, `@cd`, `@back`, `@echo`, `@clean`, `@mkdir`, `@cp`, `@cpdir`, `@rename`, `@stop`, `@set`, `@export`, `@unset`, `@return`, `@success`, `@fail`, `@and`, `@or`, `@if`, `@else`, `@switch`, `@case`, and `@default`.
 
 Comments and blank lines:
 
@@ -196,6 +229,26 @@ Rules:
 - Escape literal interpolation with `\$NAME` or `\${NAME}`.
 
 CJTaskrunner does not support shell-style command substitution, arithmetic expansion, pattern replacement, or nested expansion. Use `@set NAME:` when you need to capture task output into a variable.
+
+## Task Help
+
+Use top-level `help:` for taskfile help and task-level `@help:` for section help:
+
+```yaml
+help:
+  Project task help.
+
+build:
+  @desc build project
+  @help:
+    Build help.
+  cargo build
+```
+
+- `cj help` shows top-level `help:`.
+- `cj help build` shows the `@help:` block for `build`.
+- `cj help build:dev` shows the `@help:` block for `build:dev`.
+- `cj` lists available help sections when any help exists.
 
 ## Task Composition
 
@@ -285,11 +338,12 @@ The capture block uses the same task semantics as normal execution, but child st
 
 ## Utility and Status Directives
 
-Use `@echo`, `@clean`, and `@stop` for common task-runner behavior without dropping into shell:
+Use `@echo`, `@clean`, `@mkdir`, `@cp`, `@cpdir`, `@rename`, and `@stop` for common task-runner behavior without dropping into shell:
 
 ```yaml
 clean:
   @clean dist
+  @mkdir dist
   @echo cleaned
 
 guard:
@@ -301,6 +355,10 @@ Utility directives:
 
 - `@echo text` writes text plus a newline to stdout after interpolation.
 - `@clean path` removes one file or directory relative to the current working directory. Missing paths are ok.
+- `@mkdir path...` creates directories like `mkdir -p`.
+- `@cp source... destination` copies one or more files. Multiple sources require a directory destination.
+- `@cpdir source... destination` copies one or more directories. A trailing slash on a source copies its contents into the destination.
+- `@rename source destination` renames one file or directory. Source and destination must be in the same directory.
 - `@stop text` writes text plus a newline when provided, then stops the current flow with status `1`.
 - `@return value` writes `value` without adding a newline and returns a status derived from it: `true` is `0`, `false` is `1`, numeric values are that status code, other truthy strings are `0`, and empty/`0`/`false` values are `1`.
 - `@return` with an indented block runs that block and returns its status.

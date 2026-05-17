@@ -5,6 +5,16 @@
   "version": "0.0.1",
   "publisher": "cjtaskrunner",
   "private": true,
+  "license": "MIT",
+  "author": {
+    "name": "jgusta",
+    "url": "https://github.com/jgusta"
+  },
+  "homepage": "https://github.com/jgusta",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jgusta/cjtaskrunner.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -87,12 +97,12 @@
         "cjtaskrunner.executable.path": {
           "type": "string",
           "default": "",
-          "description": "Path to cj or cjtaskrunner. Empty uses ../../target/debug/cjtaskrunner relative to this extension."
+          "description": "Path to cj or cjtaskrunner. Empty uses bundled binary, then workspace target/debug, then PATH."
         },
         "cjtaskrunner.lsp.path": {
           "type": "string",
           "default": "",
-          "description": "Path to cjtaskrunner-lsp. Empty uses ../../target/debug/cjtaskrunner-lsp relative to this extension."
+          "description": "Path to cjtaskrunner-lsp. Empty uses bundled binary, then workspace target/debug, then PATH."
         },
         "cjtaskrunner.lsp.trace.server": {
           "type": "string",

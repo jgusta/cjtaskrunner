@@ -65,6 +65,12 @@ fn execute_block(
                     line.line_number
                 )));
             }
+            effective_env.steps += 1;
+            if effective_env.steps > MAX_EXECUTION_STEPS {
+                break Err(CjError::new(format!(
+                    "possible infinite loop detected after {MAX_EXECUTION_STEPS} task steps"
+                )));
+            }
 
             if let Some(rest) = line.text.strip_prefix('@') {
                 let (name, _) = split_directive(rest);

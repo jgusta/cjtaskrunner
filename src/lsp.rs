@@ -10,6 +10,7 @@ const DIRECTIVES: &[(&str, &str)] = &[
     ("shell", "Run command through /bin/sh -c on Unix."),
     ("task", "Run another task from same taskfile."),
     ("desc", "Describe task for listings and editor task views."),
+    ("help:", "Document task help text."),
     ("cd", "Change working directory for current scope."),
     ("back", "Undo one @cd within current scope."),
     ("echo", "Write text plus newline to stdout."),
@@ -17,6 +18,10 @@ const DIRECTIVES: &[(&str, &str)] = &[
         "clean",
         "Remove file or directory relative to current working directory.",
     ),
+    ("mkdir", "Create one or more directories."),
+    ("cp", "Copy one or more files."),
+    ("cpdir", "Copy one or more directories."),
+    ("rename", "Rename a file or directory without moving it."),
     ("stop", "Write optional text, then stop with status 1."),
     (
         "set",
@@ -72,6 +77,7 @@ enum LspSection {
     Top,
     Env,
     Task,
+    Help,
 }
 
 #[derive(Debug)]
@@ -106,6 +112,7 @@ impl LanguageServer for Backend {
                 }),
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
                 definition_provider: Some(OneOf::Left(true)),
+                document_formatting_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
             server_info: Some(ServerInfo {
@@ -276,6 +283,25 @@ impl LanguageServer for Backend {
             range: task.range,
         })))
     }
+
+    async fn formatting(
+        &self,
+        params: DocumentFormattingParams,
+    ) -> LspResult<Option<Vec<TextEdit>>> {
+        let uri = params.text_document.uri;
+        let documents = self.documents.lock().await;
+        let Some(document) = documents.get(&uri) else {
+            return Ok(None);
+        };
+        let formatted = super::format_taskfile_source(&document.text);
+        if formatted == document.text {
+            return Ok(Some(Vec::new()));
+        }
+        Ok(Some(vec![TextEdit {
+            range: full_document_range(&document.text),
+            new_text: formatted,
+        }]))
+    }
 }
 
 impl Backend {
@@ -297,11 +323,33 @@ fn analyze(text: &str) -> Analysis {
     let mut current_task: Option<String> = None;
     let mut seen_env = false;
     let mut env_names = HashSet::new();
+    let mut active_help_indent: Option<usize> = None;
 
     for (index, raw_line) in text.lines().enumerate() {
         let line_number = index as u32;
         let line = raw_line.strip_suffix('\r').unwrap_or(raw_line);
         let trimmed = line.trim();
+
+        if let Some(help_indent) = active_help_indent {
+            if trimmed.is_empty() {
+                continue;
+            }
+            let indent = line.chars().take_while(|ch| *ch == ' ').count();
+            if line.starts_with(' ') && indent > help_indent {
+                continue;
+            }
+            active_help_indent = None;
+        }
+
+        if section == LspSection::Help {
+            if trimmed.is_empty() {
+                continue;
+            }
+            if line.starts_with(' ') {
+                continue;
+            }
+            section = LspSection::Top;
+        }
 
         if trimmed.is_empty() || trimmed.starts_with('#') {
             continue;
@@ -322,6 +370,9 @@ fn analyze(text: &str) -> Analysis {
                     }
                     seen_env = true;
                     section = LspSection::Env;
+                }
+                Ok(key) if key == "help" => {
+                    section = LspSection::Help;
                 }
                 Ok(key) => {
                     if let Err(err) = super::validate_task_name(&key) {
@@ -408,6 +459,9 @@ fn analyze(text: &str) -> Analysis {
                     if indent == 2 {
                         record_description(&mut analysis, current_task.as_deref(), &expression);
                     }
+                    if is_help_directive_lsp(&expression) {
+                        active_help_indent = Some(indent);
+                    }
                     analyze_task_expression(&mut analysis, line_number, indent, &expression);
                 }
             }
@@ -420,6 +474,7 @@ fn analyze(text: &str) -> Analysis {
                     "indented entry is not under env or a task",
                 );
             }
+            LspSection::Help => unreachable!("top-level help handled before section dispatch"),
         }
     }
 
@@ -442,7 +497,7 @@ fn record_description(analysis: &mut Analysis, current_task: Option<&str>, expre
 }
 
 fn parse_top_level_lsp(line: &str) -> std::result::Result<String, &'static str> {
-    if !line.ends_with(':') || line[..line.len() - 1].contains(':') {
+    if !line.ends_with(':') {
         return Err("top-level entries must be a key followed by ':'");
     }
     let key = &line[..line.len() - 1];
@@ -450,6 +505,23 @@ fn parse_top_level_lsp(line: &str) -> std::result::Result<String, &'static str> 
         return Err("invalid top-level key");
     }
     Ok(key.to_string())
+}
+
+fn is_help_directive_lsp(expression: &str) -> bool {
+    expression == "@help:"
+}
+
+fn full_document_range(text: &str) -> Range {
+    let mut line_count = 0;
+    let mut last_line = "";
+    for line in text.split('\n') {
+        line_count += 1;
+        last_line = line.strip_suffix('\r').unwrap_or(line);
+    }
+    Range::new(
+        Position::new(0, 0),
+        Position::new((line_count - 1) as u32, utf16_len(last_line)),
+    )
 }
 
 fn analyze_env_entry(
@@ -552,6 +624,37 @@ fn analyze_task_expression(
                 );
             }
         }
+        "mkdir" => match arg_count(args) {
+            Some(count) if count >= 1 => {}
+            _ => push_diagnostic(
+                analysis,
+                line_number,
+                indent,
+                indent + expression.len(),
+                "@mkdir expects at least one argument",
+            ),
+        },
+        "cp" | "cpdir" => match arg_count(args) {
+            Some(count) if count >= 2 => {}
+            _ => push_diagnostic(
+                analysis,
+                line_number,
+                indent,
+                indent + expression.len(),
+                &format!("@{name} expects one or more sources and a destination"),
+            ),
+        },
+        "rename" => {
+            if arg_count(args) != Some(2) {
+                push_diagnostic(
+                    analysis,
+                    line_number,
+                    indent,
+                    indent + expression.len(),
+                    "@rename expects source and destination",
+                );
+            }
+        }
         "unset" | "if-set" | "if-unset" => match super::split_words(args) {
             Ok(argv) if argv.len() == 1 => {
                 if let Ok(variable) = super::parse_variable_name_token(&argv[0]) {
@@ -569,6 +672,17 @@ fn analyze_task_expression(
         "set" => analyze_set_args(analysis, line_number, indent, expression, args),
         "export" => analyze_export_args(analysis, line_number, indent, expression, args),
         "desc" => {}
+        "help:" => {
+            if !args.trim().is_empty() {
+                push_diagnostic(
+                    analysis,
+                    line_number,
+                    indent,
+                    indent + expression.len(),
+                    "@help: does not take arguments",
+                );
+            }
+        }
         "default" | "success" | "fail" => {
             if !args.trim().is_empty() {
                 push_diagnostic(
@@ -677,6 +791,9 @@ fn analyze_export_args(
 }
 
 fn invalid_trailing_colon(name: &str, args: &str) -> bool {
+    if name == "help:" {
+        return false;
+    }
     if name == "set" {
         return false;
     }
@@ -800,7 +917,7 @@ fn word_at(text: &str, position: Position) -> Option<String> {
 }
 
 fn is_word_byte(byte: u8) -> bool {
-    byte == b'@' || byte == b'-' || byte == b'_' || byte.is_ascii_alphanumeric()
+    byte == b'@' || byte == b':' || byte == b'-' || byte == b'_' || byte.is_ascii_alphanumeric()
 }
 
 fn task_reference_at(text: &str, position: Position) -> Option<String> {
@@ -844,5 +961,38 @@ test:
             .diagnostics
             .iter()
             .any(|diag| diag.message.contains("unknown directive")));
+    }
+
+    #[test]
+    fn lsp_accepts_desc_text() {
+        let analysis = analyze(
+            r#"build:
+  @desc build project
+  true
+"#,
+        );
+
+        assert!(
+            analysis.diagnostics.is_empty(),
+            "unexpected diagnostics: {:?}",
+            analysis.diagnostics
+        );
+    }
+
+    #[test]
+    fn lsp_accepts_help_colon_block() {
+        let analysis = analyze(
+            r#"build:
+  @help:
+    Build help.
+  true
+"#,
+        );
+
+        assert!(
+            analysis.diagnostics.is_empty(),
+            "unexpected diagnostics: {:?}",
+            analysis.diagnostics
+        );
     }
 }

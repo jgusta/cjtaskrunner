@@ -40,6 +40,10 @@ Discovery does not search parent directories.
 
 Tasks start with the selected taskfile's directory as the working directory.
 
+## Formatting
+
+`cj --format [taskfile-or-directory]` formats a taskfile in place. The formatter is line-preserving: it trims trailing whitespace, expands indentation tabs to spaces, normalizes indentation to even widths, and preserves comments, blank lines, and task order.
+
 ## File Format
 
 The format is line-oriented and YAML-like, but not general YAML.
@@ -47,6 +51,7 @@ The format is line-oriented and YAML-like, but not general YAML.
 Top-level entries are either:
 
 - `env:`
+- `help:`
 - `<task-name>:`
 
 Blank lines are ignored. Comment-only lines start with optional spaces followed by `#` and are ignored.
@@ -100,12 +105,16 @@ build:
 Task names must match:
 
 ```text
-^[A-Za-z0-9_-]+$
+^[A-Za-z0-9_-]+(:[A-Za-z0-9_-]+)?$
 ```
 
-`env` is reserved and cannot be used as a task name.
+`env` and `help` are reserved and cannot be used as task names.
+
+Task names must not match a directory in the selected taskfile's directory.
 
 Task lines are non-empty indented lines under a task. They run in order. Execution stops on first non-zero status unless a *same-level* `@or` handles it.
+
+Execution stops with an error after 100,000 task steps as possible infinite-loop protection.
 
 Semicolons split multiple *same-level* expressions on one physical line. Semicolons inside single or double quotes are preserved.
 
@@ -208,6 +217,20 @@ build:
 
 Defines task description metadata. `cj` and `cjtaskrunner` show it when run without a task name. `@desc` does not run a command.
 
+### `help:`, `@help:`
+
+```yaml
+help:
+  Project task help.
+
+build:
+  @help:
+    Build help.
+  cargo build
+```
+
+Top-level `help:` defines taskfile help. Task-level `@help:` defines help for that task. Plain `@help` is invalid. `cj help` prints top-level help. `cj help <task>` prints task help. Running `cj` lists available help sections when any exist.
+
 ### `@task`
 
 ```yaml
@@ -268,16 +291,21 @@ Runs the indented block with stdout capture enabled. Captured stdout is stored i
 
 The capture fails when the block's final status is non-zero.
 
-### `@echo`, `@clean`, `@stop`
+### `@echo`, `@clean`, `@mkdir`, `@cp`, `@cpdir`, `@rename`, `@stop`
 
 ```yaml
 clean:
   @clean dist
+  @mkdir dist
   @echo cleaned
 ```
 
 - `@echo text` writes text plus newline to stdout after interpolation.
 - `@clean path` removes one file or directory relative to the current working directory. Missing paths are not errors.
+- `@mkdir path...` creates directories like `mkdir -p`.
+- `@cp source... destination` copies one or more files. Multiple sources require a directory destination.
+- `@cpdir source... destination` copies one or more directories. A trailing slash on a source copies its contents into the destination.
+- `@rename source destination` renames one file or directory. Source and destination must be in the same directory.
 - `@stop text` writes text plus newline when text is provided, then returns status `1`.
 
 ### `@return`, `@success`, `@fail`

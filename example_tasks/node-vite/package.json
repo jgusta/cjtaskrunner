@@ -1,6 +1,11 @@
 {
   "name": "cjtaskrunner-node-vite-example",
   "private": true,
+  "license": "MIT",
+  "author": {
+    "name": "jgusta",
+    "url": "https://github.com/jgusta"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

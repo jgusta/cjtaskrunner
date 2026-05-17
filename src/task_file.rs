@@ -8,15 +8,54 @@ pub fn parse_task_file(source: &str, path: &Path) -> CjResult<TaskFile> {
     let mut env = EnvEntries::default();
     let mut tasks: HashMap<String, Vec<TaskLine>> = HashMap::new();
     let mut descriptions: HashMap<String, String> = HashMap::new();
+    let mut help_lines = Vec::new();
+    let mut task_help: HashMap<String, String> = HashMap::new();
     let mut task_order = Vec::new();
     let mut section = Section::Top;
     let mut current_task: Option<String> = None;
     let mut seen_env = false;
+    let mut seen_help = false;
+    let mut active_task_help: Option<(String, usize, Vec<String>)> = None;
 
     for (index, raw_line) in source.lines().enumerate() {
         let line_number = index + 1;
         let line = raw_line.strip_suffix('\r').unwrap_or(raw_line);
         let trimmed = line.trim();
+
+        if let Some((_, help_indent, lines)) = active_task_help.as_mut() {
+            if trimmed.is_empty() {
+                lines.push(String::new());
+                continue;
+            }
+            let indent = line.chars().take_while(|ch| *ch == ' ').count();
+            if line.starts_with(' ') && indent > *help_indent {
+                lines.push(strip_help_indent(line, *help_indent + 2).to_string());
+                continue;
+            }
+        }
+        if let Some((task, _, lines)) = active_task_help.take() {
+            task_help.insert(task, finish_help(lines));
+        }
+
+        if section == Section::Help {
+            if trimmed.is_empty() {
+                help_lines.push(String::new());
+                continue;
+            }
+            if line.starts_with(' ') {
+                let indent = line.chars().take_while(|ch| *ch == ' ').count();
+                if indent < 2 {
+                    return Err(line_error(
+                        path,
+                        line_number,
+                        "help entries must use at least two leading spaces",
+                    ));
+                }
+                help_lines.push(strip_help_indent(line, 2).to_string());
+                continue;
+            }
+            section = Section::Top;
+        }
 
         if trimmed.is_empty() || trimmed.starts_with('#') {
             continue;
@@ -35,6 +74,16 @@ pub fn parse_task_file(source: &str, path: &Path) -> CjResult<TaskFile> {
                 }
                 seen_env = true;
                 section = Section::Env;
+            } else if key == "help" {
+                if seen_help {
+                    return Err(line_error(
+                        path,
+                        line_number,
+                        "multiple help sections are not allowed",
+                    ));
+                }
+                seen_help = true;
+                section = Section::Help;
             } else {
                 validate_task_name(&key).map_err(|err| {
                     line_error(
@@ -92,6 +141,10 @@ pub fn parse_task_file(source: &str, path: &Path) -> CjResult<TaskFile> {
                         descriptions.insert(task_name.clone(), description.to_string());
                         continue;
                     }
+                    if is_help_directive(text) {
+                        active_task_help = Some((task_name.clone(), indent, Vec::new()));
+                        continue;
+                    }
                 }
                 let task = tasks.get_mut(task_name).expect("current task must exist");
                 for text in split_line_expressions(text) {
@@ -109,13 +162,20 @@ pub fn parse_task_file(source: &str, path: &Path) -> CjResult<TaskFile> {
                     "indented entry is not under env or a task",
                 ));
             }
+            Section::Help => unreachable!("top-level help handled before section dispatch"),
         }
+    }
+
+    if let Some((task, _, lines)) = active_task_help.take() {
+        task_help.insert(task, finish_help(lines));
     }
 
     Ok(TaskFile {
         env,
         tasks,
         descriptions,
+        help: seen_help.then(|| finish_help(help_lines)),
+        task_help,
         task_order,
     })
 }
@@ -126,6 +186,38 @@ fn parse_description(text: &str) -> Option<&str> {
         return None;
     }
     Some(args.trim())
+}
+
+fn is_help_directive(text: &str) -> bool {
+    text == "@help:"
+}
+
+fn strip_help_indent(line: &str, width: usize) -> &str {
+    let mut remaining = width;
+    let mut byte_index = 0;
+    for (index, ch) in line.char_indices() {
+        if remaining == 0 {
+            byte_index = index;
+            break;
+        }
+        if ch != ' ' {
+            byte_index = index;
+            break;
+        }
+        remaining -= 1;
+        byte_index = index + 1;
+    }
+    &line[byte_index..]
+}
+
+fn finish_help(mut lines: Vec<String>) -> String {
+    while lines.first().is_some_and(|line| line.is_empty()) {
+        lines.remove(0);
+    }
+    while lines.last().is_some_and(|line| line.is_empty()) {
+        lines.pop();
+    }
+    lines.join("\n")
 }
 
 fn split_line_expressions(text: &str) -> Vec<String> {
@@ -174,7 +266,7 @@ fn split_line_expressions(text: &str) -> Vec<String> {
 }
 
 fn parse_top_level_key(line: &str, path: &Path, line_number: usize) -> CjResult<String> {
-    if !line.ends_with(':') || line[..line.len() - 1].contains(':') {
+    if !line.ends_with(':') {
         return Err(line_error(
             path,
             line_number,
@@ -203,6 +295,12 @@ fn validate_directive_syntax(text: &str, path: &Path, line_number: usize) -> CjR
                 | "case"
                 | "default"
         ) && args.trim_end().ends_with(':');
+        if name == "help:" {
+            return Ok(());
+        }
+        if name == "help" {
+            return Err(line_error(path, line_number, "@help must use trailing ':'"));
+        }
         if name.ends_with(':') || colon_block_directive {
             return Err(line_error(
                 path,
@@ -260,17 +358,29 @@ fn validate_task_name(name: &str) -> Result<(), &'static str> {
     if name.is_empty() {
         return Err("task name cannot be empty");
     }
-    if name == "env" {
-        return Err("'env' is reserved");
+    if name == "env" || name == "help" {
+        return Err("'env' and 'help' are reserved");
     }
-    if name
-        .chars()
-        .all(|ch| ch == '-' || ch == '_' || ch.is_ascii_alphanumeric())
-    {
-        Ok(())
-    } else {
-        Err("task names must contain only ASCII letters, digits, hyphens, and underscores")
+    let mut parts = name.split(':');
+    let Some(first) = parts.next() else {
+        return Err("task name cannot be empty");
+    };
+    if !valid_task_name_part(first) {
+        return Err("task names must contain ASCII letters, digits, hyphens, and underscores");
     }
+    match (parts.next(), parts.next()) {
+        (None, None) => Ok(()),
+        (Some(second), None) if valid_task_name_part(second) => Ok(()),
+        (Some(_), None) => Err("task name group cannot be empty"),
+        _ => Err("task names may contain at most one colon"),
+    }
+}
+
+fn valid_task_name_part(name: &str) -> bool {
+    !name.is_empty()
+        && name
+            .chars()
+            .all(|ch| ch == '-' || ch == '_' || ch.is_ascii_alphanumeric())
 }
 
 fn validate_env_name(name: &str) -> Result<(), &'static str> {

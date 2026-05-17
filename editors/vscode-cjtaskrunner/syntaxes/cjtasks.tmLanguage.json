@@ -32,7 +32,7 @@
       "patterns": [
         {
           "name": "entity.name.function.task.cjtasks",
-          "match": "^[A-Za-z0-9_-]+(?=:)"
+          "match": "^[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)?(?=:)"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "patterns": [
         {
           "name": "keyword.control.directive.cjtasks",
-          "match": "@(?:shell|task|desc|cd|back|echo|clean|stop|set|export|unset|return|success|fail|and|or|if|else|if-exists|if-missing|if-set|if-unset|switch|case|default)\\b"
+          "match": "@(?:help:|(?:shell|task|desc|cd|back|echo|clean|mkdir|cp|cpdir|rename|stop|set|export|unset|return|success|fail|and|or|if|else|if-exists|if-missing|if-set|if-unset|switch|case|default)\\b)"
         }
       ]
     },

@@ -35,6 +35,7 @@ impl From<io::Error> for CjError {
 }
 
 type CjResult<T> = Result<T, CjError>;
+const MAX_EXECUTION_STEPS: usize = 100_000;
 
 thread_local! {
     static CAPTURED_OUTPUT: RefCell<String> = const { RefCell::new(String::new()) };
@@ -45,6 +46,8 @@ pub struct TaskFile {
     env: EnvEntries,
     tasks: HashMap<String, Vec<TaskLine>>,
     descriptions: HashMap<String, String>,
+    help: Option<String>,
+    task_help: HashMap<String, String>,
     task_order: Vec<String>,
 }
 
@@ -66,6 +69,7 @@ enum Section {
     Top,
     Env,
     Task,
+    Help,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -90,6 +94,7 @@ struct CommandResult {
 struct RuntimeEnv {
     vars: HashMap<String, String>,
     exports: HashMap<String, String>,
+    steps: usize,
 }
 
 impl RuntimeEnv {
@@ -97,6 +102,7 @@ impl RuntimeEnv {
         Self {
             vars: initial.clone(),
             exports: initial,
+            steps: 0,
         }
     }
 }
@@ -162,6 +168,7 @@ include!("environment.rs");
 include!("runner.rs");
 include!("directives.rs");
 include!("command_text.rs");
+include!("formatter.rs");
 
 pub mod lsp;
 
@@ -213,6 +220,14 @@ dev:
 
 test123:
   cargo test
+
+build:dev:
+  @desc build dev
+  @help:
+    Build dev artifacts.
+
+    Use during local work.
+  cargo build
 "#,
             path,
         )
@@ -221,10 +236,37 @@ test123:
         assert_eq!(parsed.env.overrides["NODE_ENV"], "development");
         assert_eq!(parsed.env.overrides["EMPTY"], "");
         assert_eq!(parsed.env.fallbacks["PORT"], "5173");
-        assert_eq!(parsed.task_order, vec!["dev", "test123"]);
+        assert_eq!(parsed.task_order, vec!["dev", "test123", "build:dev"]);
         assert_eq!(parsed.descriptions["dev"], "start development server");
+        assert_eq!(parsed.descriptions["build:dev"], "build dev");
+        assert_eq!(
+            parsed.task_help["build:dev"],
+            "Build dev artifacts.\n\nUse during local work."
+        );
         assert_eq!(parsed.tasks["dev"][0].text, "echo # retained");
         assert_eq!(parsed.tasks["test123"][0].text, "cargo test");
+        assert_eq!(parsed.tasks["build:dev"][0].text, "cargo build");
+    }
+
+    #[test]
+    fn parses_top_level_help_and_rejects_reserved_help_task() {
+        let parsed = parse_task_file(
+            "help:\n  Project help.\n\nrun:\n  true\n",
+            Path::new("cjtasks"),
+        )
+        .expect("parse");
+        assert_eq!(parsed.help.as_deref(), Some("Project help."));
+
+        let err = parse_task_file("help:\n  ok\nhelp:\n  nope\n", Path::new("cjtasks"))
+            .expect_err("duplicate help should fail");
+        assert!(err.to_string().contains("multiple help sections"));
+    }
+
+    #[test]
+    fn rejects_deep_task_groups() {
+        let err = parse_task_file("build:dev:fast:\n  true\n", Path::new("cjtasks"))
+            .expect_err("deep task groups should fail");
+        assert!(err.to_string().contains("at most one colon"));
     }
 
     #[test]
@@ -818,12 +860,181 @@ write:
         fs::create_dir_all(&dir).expect("mkdir");
         fs::write(
             dir.join("cjtasks"),
-            "build:\n  @desc compile project\n  true\n",
+            "help:\n  Root help.\nbuild:\n  @desc compile project\n  @help:\n    Build help.\n  true\n",
         )
         .expect("write cjtasks");
 
         let code = run_cli_from_cwd(&[], &dir).expect("list");
         assert_eq!(code, 0);
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn help_command_prints_top_level_and_task_help() {
+        let dir = test_path("help-command");
+        fs::create_dir_all(&dir).expect("mkdir");
+        fs::write(
+            dir.join("cjtasks"),
+            "help:\n  Root help.\nbuild:dev:\n  @help:\n    Build dev help.\n  true\n",
+        )
+        .expect("write cjtasks");
+
+        assert_eq!(
+            run_cli_from_cwd(&["help".to_string()], &dir).expect("top help"),
+            0
+        );
+        assert_eq!(
+            run_cli_from_cwd(&["help".to_string(), "build:dev".to_string()], &dir)
+                .expect("task help"),
+            0
+        );
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn rejects_help_without_colon() {
+        let err = parse_task_file("run:\n  @help\n    nope\n", Path::new("cjtasks"))
+            .expect_err("@help must use colon");
+        assert!(err.to_string().contains("@help must use trailing ':'"));
+    }
+
+    #[test]
+    fn default_flag_runs_default_task() {
+        let dir = test_path("default-flag");
+        fs::create_dir_all(&dir).expect("mkdir");
+        fs::write(
+            dir.join("cjtasks"),
+            "default:\n  @shell printf ok > default.txt\n",
+        )
+        .expect("write cjtasks");
+
+        let code = run_cli_from_cwd(&["--default".to_string()], &dir).expect("default");
+        assert_eq!(code, 0);
+        assert_eq!(
+            fs::read_to_string(dir.join("default.txt")).expect("read"),
+            "ok"
+        );
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn filesystem_directives_copy_create_and_rename() {
+        let dir = test_path("filesystem-directives");
+        fs::create_dir_all(dir.join("srcdir/nested")).expect("mkdir srcdir");
+        fs::write(dir.join("a.txt"), "a").expect("write a");
+        fs::write(dir.join("b.txt"), "b").expect("write b");
+        fs::write(dir.join("srcdir/nested/c.txt"), "c").expect("write c");
+        let parsed = parse_task_file(
+            r#"run:
+  @mkdir out/files out/dirs
+  @cp a.txt b.txt out/files
+  @cp a.txt out/single.txt
+  @cpdir srcdir out/dirs
+  @cpdir srcdir/ out/contents
+  @rename out/single.txt out/renamed.txt
+"#,
+            Path::new("cjtasks"),
+        )
+        .expect("parse");
+        let mut env = minimal_env();
+
+        let code = run_task_from_dir(&dir, &parsed, "run", &mut env).expect("run");
+        assert_eq!(code, 0);
+        assert_eq!(
+            fs::read_to_string(dir.join("out/files/a.txt")).expect("a"),
+            "a"
+        );
+        assert_eq!(
+            fs::read_to_string(dir.join("out/files/b.txt")).expect("b"),
+            "b"
+        );
+        assert_eq!(
+            fs::read_to_string(dir.join("out/dirs/srcdir/nested/c.txt")).expect("dir c"),
+            "c"
+        );
+        assert_eq!(
+            fs::read_to_string(dir.join("out/contents/nested/c.txt")).expect("contents c"),
+            "c"
+        );
+        assert_eq!(
+            fs::read_to_string(dir.join("out/renamed.txt")).expect("renamed"),
+            "a"
+        );
+        assert!(!dir.join("out/single.txt").exists());
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn rename_cannot_move_between_directories() {
+        let dir = test_path("rename-no-move");
+        fs::create_dir_all(dir.join("other")).expect("mkdir");
+        fs::write(dir.join("a.txt"), "a").expect("write a");
+        let parsed = parse_task_file("run:\n  @rename a.txt other/a.txt\n", Path::new("cjtasks"))
+            .expect("parse");
+        let mut env = minimal_env();
+
+        let err =
+            run_task_from_dir(&dir, &parsed, "run", &mut env).expect_err("rename should not move");
+        assert!(err.to_string().contains("cannot move across directories"));
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn task_names_cannot_conflict_with_directories() {
+        let dir = test_path("task-dir-conflict");
+        fs::create_dir_all(dir.join("build")).expect("mkdir build");
+        fs::write(dir.join("cjtasks"), "build:\n  true\n").expect("write cjtasks");
+
+        let err = run_cli_from_cwd(&[], &dir).expect_err("task/folder conflict should fail");
+        assert!(err
+            .to_string()
+            .contains("task name conflicts with directory"));
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn execution_step_limit_detects_possible_infinite_loop() {
+        let dir = test_path("step-limit");
+        fs::create_dir_all(&dir).expect("mkdir");
+        let parsed = parse_task_file("run:\n  true\n", Path::new("cjtasks")).expect("parse");
+        let mut env = minimal_env();
+        env.steps = MAX_EXECUTION_STEPS;
+
+        let err =
+            run_task_from_dir(&dir, &parsed, "run", &mut env).expect_err("step limit should fail");
+        assert!(err.to_string().contains("possible infinite loop"));
+
+        fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn formats_taskfile_source_without_ast() {
+        let source = "env:\t\n\tNAME: value\t\nrun:\n   @desc build\t\n\tcargo build\t\n\n";
+        let formatted = format_taskfile_source(source);
+        assert_eq!(
+            formatted,
+            "env:\n  NAME: value\nrun:\n  @desc build\n  cargo build\n\n"
+        );
+    }
+
+    #[test]
+    fn format_flag_formats_discovered_taskfile() {
+        let dir = test_path("format-flag");
+        fs::create_dir_all(&dir).expect("mkdir");
+        fs::write(dir.join("cjtasks"), "run:\t\n\ttrue\t\n").expect("write cjtasks");
+
+        let code = run_cli_from_cwd(&["--format".to_string()], &dir).expect("format");
+        assert_eq!(code, 0);
+        assert_eq!(
+            fs::read_to_string(dir.join("cjtasks")).expect("read"),
+            "run:\n  true\n"
+        );
 
         fs::remove_dir_all(dir).expect("cleanup");
     }

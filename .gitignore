@@ -23,9 +23,12 @@ $RECYCLE.BIN/
 *~
 editors/vscode-cjtaskrunner/node_modules/
 editors/vscode-cjtaskrunner/out/
+editors/vscode-cjtaskrunner/bin/
+editors/vscode-cjtaskrunner/pnpm-lock.yaml
 
 # Rust build artifacts
 /target/
+/dist/
 example_tasks/rust-cli/target/
 
 # Node example artifacts

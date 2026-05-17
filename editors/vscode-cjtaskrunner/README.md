@@ -25,8 +25,9 @@ If the extension cannot find the server, set `cjtaskrunner.lsp.path` to the abso
 - directive, task, and variable completions
 - directive hover
 - go to definition for `@task`
+- document formatting
 - Explorer `CJTaskrunner` view for `cjtasks` and `*.cjtasks`
 - run tasks from the tree view or `CJTaskrunner: Run Task`
 - task descriptions from direct `@desc` lines
 
-Task runs use `cjtaskrunner.executable.path` when set. Otherwise the extension uses `../../target/debug/cjtaskrunner` relative to the extension directory.
+Task runs use `cjtaskrunner.executable.path` when set. Otherwise the extension uses bundled binaries, then workspace `target/debug`, then `PATH`. The LSP uses `cjtaskrunner.lsp.path` with the same fallback behavior.

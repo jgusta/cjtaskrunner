@@ -28,7 +28,7 @@ type TreeEntry =
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const config = vscode.workspace.getConfiguration("cjtaskrunner");
-  const serverPath = resolveToolPath(
+  const serverPath = await resolveToolPath(
     context,
     config.get<string>("lsp.path", "").trim(),
     process.platform === "win32" ? "cjtaskrunner-lsp.exe" : "cjtaskrunner-lsp"
@@ -98,11 +98,37 @@ function resolveToolPath(
   context: vscode.ExtensionContext,
   configuredPath: string,
   binaryName: string
-): string {
+): Promise<string> {
   if (configuredPath.length > 0) {
-    return configuredPath;
+    return Promise.resolve(configuredPath);
   }
-  return path.resolve(context.extensionPath, "..", "..", "target", "debug", binaryName);
+  return resolveDefaultToolPath(context, binaryName);
+}
+
+async function resolveDefaultToolPath(
+  context: vscode.ExtensionContext,
+  binaryName: string
+): Promise<string> {
+  const bundled = path.join(context.extensionPath, "bin", binaryName);
+  if (await pathExists(bundled)) {
+    return bundled;
+  }
+  for (const folder of vscode.workspace.workspaceFolders ?? []) {
+    const candidate = path.join(folder.uri.fsPath, "target", "debug", binaryName);
+    if (await pathExists(candidate)) {
+      return candidate;
+    }
+  }
+  return binaryName;
+}
+
+async function pathExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 class CjTaskProvider implements vscode.TreeDataProvider<TreeEntry> {
@@ -196,7 +222,7 @@ async function readTasks(uri: vscode.Uri): Promise<TaskEntry[]> {
         continue;
       }
       const name = line.slice(0, -1);
-      if (name !== "env" && /^[A-Za-z0-9_.-]+$/.test(name)) {
+      if (name !== "env" && name !== "help" && /^[A-Za-z0-9_.-]+(?::[A-Za-z0-9_.-]+)?$/.test(name)) {
         currentTask = { name };
         tasks.push(currentTask);
       } else {
@@ -221,7 +247,7 @@ async function runTreeEntry(context: vscode.ExtensionContext, entry?: TreeEntry)
   }
 
   const config = vscode.workspace.getConfiguration("cjtaskrunner");
-  const runnerPath = resolveToolPath(
+  const runnerPath = await resolveToolPath(
     context,
     config.get<string>("executable.path", "").trim(),
     process.platform === "win32" ? "cjtaskrunner.exe" : "cjtaskrunner"
