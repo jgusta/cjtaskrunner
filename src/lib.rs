@@ -1109,6 +1109,45 @@ write:
     }
 
     #[test]
+    fn install_completions_observes_xdg_paths() {
+        let root = test_path("xdg-completions");
+        let home = root.join("home");
+        let data = root.join("data");
+        let config = root.join("config");
+        fs::create_dir_all(&home).expect("mkdir home");
+        fs::create_dir_all(&data).expect("mkdir data");
+        fs::create_dir_all(&config).expect("mkdir config");
+
+        env::set_var("HOME", &home);
+        env::set_var("XDG_DATA_HOME", &data);
+        env::set_var("XDG_CONFIG_HOME", &config);
+
+        run_cli_from_cwd(
+            &["--install-completions".to_string(), "bash".to_string()],
+            Path::new("."),
+        )
+        .expect("install bash");
+        run_cli_from_cwd(
+            &["--install-completions".to_string(), "zsh".to_string()],
+            Path::new("."),
+        )
+        .expect("install zsh");
+        run_cli_from_cwd(
+            &["--install-completions".to_string(), "fish".to_string()],
+            Path::new("."),
+        )
+        .expect("install fish");
+
+        assert!(data.join("bash-completion/completions/cj").exists());
+        assert!(data.join("zsh/site-functions/_cj").exists());
+        assert!(config.join("fish/completions/cj.fish").exists());
+
+        env::remove_var("XDG_DATA_HOME");
+        env::remove_var("XDG_CONFIG_HOME");
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
     fn selected_venv_requires_bin_directory() {
         let dir = test_path("bad-venv");
         fs::create_dir_all(dir.join(".venv")).expect("mkdir");
