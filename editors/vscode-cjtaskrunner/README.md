@@ -1,6 +1,25 @@
 # CJTaskrunner VS Code Extension
 
-Local VS Code language support for `cjtasks` and `*.cjtasks` files.
+Language support and task execution tools for `cjtasks` and `*.cjtasks` files.
+
+## Features
+
+- Syntax highlighting for CJTaskrunner task files.
+- Diagnostics, document symbols, directive hovers, task/variable completions, and formatting.
+- Go-to-definition for `@task` references.
+- Explorer `CJTaskrunner` view for task discovery.
+- One-click task execution from the tree view and command palette.
+
+## Requirements
+
+- VS Code `1.85.0` or newer.
+- `cj` or `cjtaskrunner` and `cjtaskrunner-lsp` binaries available via bundled assets, workspace `target/debug`, or `PATH`.
+
+## Extension Settings
+
+- `cjtaskrunner.executable.path`: Absolute path to `cj` or `cjtaskrunner`.
+- `cjtaskrunner.lsp.path`: Absolute path to `cjtaskrunner-lsp`.
+- `cjtaskrunner.lsp.trace.server`: LSP trace mode (`off`, `messages`, `verbose`).
 
 ## Development
 
@@ -14,20 +33,8 @@ npm run compile
 code .
 ```
 
-Press `F5` in VS Code to launch an Extension Development Host. Open a file named `cjtasks` or ending in `.cjtasks`.
+Press `F5` in VS Code to launch an Extension Development Host.
 
-If the extension cannot find the server, set `cjtaskrunner.lsp.path` to the absolute path of `target/debug/cjtaskrunner-lsp`.
+## Marketplace Release Notes
 
-## Features
-
-- diagnostics
-- task document symbols
-- directive, task, and variable completions
-- directive hover
-- go to definition for `@task`
-- document formatting
-- Explorer `CJTaskrunner` view for `cjtasks` and `*.cjtasks`
-- run tasks from the tree view or `CJTaskrunner: Run Task`
-- task descriptions from direct `@desc` lines
-
-Task runs use `cjtaskrunner.executable.path` when set. Otherwise the extension uses bundled binaries, then workspace `target/debug`, then `PATH`. The LSP uses `cjtaskrunner.lsp.path` with the same fallback behavior.
+Release history is tracked in [`CHANGELOG.md`](./CHANGELOG.md). Marketplace publishing steps are tracked in [`MARKETPLACE_PREP.md`](./MARKETPLACE_PREP.md).

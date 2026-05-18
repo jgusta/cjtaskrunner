@@ -1,16 +1,16 @@
 {
   "name": "cjtaskrunner-vscode",
-  "displayName": "CJTaskrunner",
-  "description": "VS Code language support for CJTaskrunner taskfiles.",
+  "displayName": "CJTaskrunner Tasks",
+  "description": "Taskfile language support and task runner view for CJTaskrunner.",
   "version": "0.0.1",
   "publisher": "cjtaskrunner",
-  "private": true,
+  "private": false,
   "license": "MIT",
   "author": {
     "name": "jgusta",
     "url": "https://github.com/jgusta"
   },
-  "homepage": "https://github.com/jgusta",
+  "homepage": "https://github.com/jgusta/cjtaskrunner/tree/main/editors/vscode-cjtaskrunner",
   "repository": {
     "type": "git",
     "url": "https://github.com/jgusta/cjtaskrunner.git"
@@ -120,7 +120,11 @@
   "scripts": {
     "compile": "tsc -p ./",
     "watch": "tsc -w -p ./",
-    "vscode:prepublish": "npm run compile"
+    "vscode:prepublish": "npm run compile",
+    "package": "npx @vscode/vsce package",
+    "publish:vsce": "npx @vscode/vsce publish",
+    "package:ci": "npm run compile && vsce package --no-dependencies",
+    "publish:dry-run": "vsce package --no-dependencies"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"
@@ -128,6 +132,30 @@
   "devDependencies": {
     "@types/node": "^20.11.30",
     "@types/vscode": "^1.85.0",
-    "typescript": "^5.4.5"
-  }
+    "typescript": "^5.4.5",
+    "@vscode/vsce": "^3.9.1"
+  },
+  "bugs": {
+    "url": "https://github.com/jgusta/cjtaskrunner/issues"
+  },
+  "keywords": [
+    "cjtasks",
+    "task-runner",
+    "build-tool",
+    "language-support"
+  ],
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#111827",
+    "theme": "dark"
+  },
+  "preview": false,
+  "qna": "https://github.com/jgusta/cjtaskrunner/discussions",
+  "badges": [
+    {
+      "url": "https://img.shields.io/badge/cjtaskrunner-vscode-6366f1",
+      "href": "https://github.com/jgusta/cjtaskrunner/tree/main/editors/vscode-cjtaskrunner",
+      "description": "Project home"
+    }
+  ]
 }

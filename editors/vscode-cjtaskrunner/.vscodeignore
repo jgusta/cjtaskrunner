@@ -1,5 +1,10 @@
-src/
+.vscode/**
+.vscode-test/**
+src/**
+node_modules/**
 tsconfig.json
-pnpm-lock.yaml
-*.map
-out/**/*.map
+package-lock.json
+MARKETPLACE_PREP.md
+RELEASE.md
+**/*.map
+**/*.ts

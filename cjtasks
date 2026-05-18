@@ -14,19 +14,17 @@ format-cjtasks:
 
 install-completions:
   @desc install shell completions for current shell
-  @if $SHELL == /bin/zsh
-    cargo run -- --install-completions zsh
-  @else
-    @if $SHELL == /bin/bash
+  @switch $SHELL
+    @case /bin/zsh
+      cargo run -- --install-completions zsh
+    @case /bin/bash
       cargo run -- --install-completions bash
-    @else
-      @if $SHELL == /opt/homebrew/bin/fish
-        cargo run -- --install-completions fish
-      @else
-        @if $SHELL == /usr/local/bin/fish
-          cargo run -- --install-completions fish
-        @else
-          @stop unsupported shell: $SHELL
+    @case /opt/homebrew/bin/fish
+      cargo run -- --install-completions fish
+    @case /usr/local/bin/fish
+      cargo run -- --install-completions fish
+    @default
+      @stop unsupported shell: $SHELL
 
 extension-deps:
   @desc install vs code extension dependencies
