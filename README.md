@@ -120,19 +120,13 @@ cj --install-completions bash
 cj --install-completions fish
 ```
 
-Install paths:
+Install paths (respecting XDG variables):
 
-- bash: `~/.local/share/bash-completion/completions/cj`
-- zsh: `~/.local/share/zsh/site-functions/_cj`
-- fish: `~/.config/fish/completions/cj.fish`
+- zsh: `${XDG_DATA_HOME:-~/.local/share}/zsh/site-functions/_cj`
+- bash: `${XDG_DATA_HOME:-~/.local/share}/bash-completion/completions/cj`
+- fish: `${XDG_CONFIG_HOME:-~/.config}/fish/completions/cj.fish`
 
-CJTaskrunner observes shell-specific XDG directories when the variables are set:
-
-- bash: `$XDG_DATA_HOME/bash-completion/completions/cj`
-- zsh: `$XDG_DATA_HOME/zsh/site-functions/_cj`
-- fish: `$XDG_CONFIG_HOME/fish/completions/cj.fish`
-
-For zsh, ensure the installed `site-functions` directory is in `fpath` before `compinit` runs from your shell config.
+For zsh, ensure `${XDG_DATA_HOME:-~/.local/share}/zsh/site-functions` is in `fpath` and `compinit` runs from your shell config.
 
 ## Taskfile Discovery
 
