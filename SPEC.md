@@ -48,7 +48,11 @@ Tasks start with the selected taskfile's directory as the working directory.
 
 `cj --completions <bash|zsh|fish>` prints shell completions.
 
-`cj --install-completions <bash|zsh|fish>` writes completions to the user's default shell completion directory.
+`cj --install-completions <bash|zsh|fish>` writes completions to the user's default shell completion directory, observing shell-specific XDG locations:
+
+- bash: `$XDG_DATA_HOME/bash-completion/completions/cj`, or `~/.local/share/bash-completion/completions/cj`
+- zsh: `$XDG_DATA_HOME/zsh/site-functions/_cj`, or `~/.local/share/zsh/site-functions/_cj`
+- fish: `$XDG_CONFIG_HOME/fish/completions/cj.fish`, or `~/.config/fish/completions/cj.fish`
 
 ## File Format
 

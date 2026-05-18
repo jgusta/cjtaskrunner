@@ -186,6 +186,12 @@ fn install_completions(shell: CompletionShell) -> CjResult<i32> {
     fs::write(&path, completion_script(shell))
         .map_err(|err| CjError::new(format!("failed to write {}: {err}", path.display())))?;
     println!("installed completions to {}", path.display());
+    if shell == CompletionShell::Zsh {
+        println!(
+            "add {} to your zsh fpath before running compinit",
+            parent.display()
+        );
+    }
     Ok(0)
 }
 
