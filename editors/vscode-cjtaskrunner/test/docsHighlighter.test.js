@@ -3,7 +3,7 @@ const path = require("path");
 
 const root = path.join(__dirname, "..", "..", "..");
 const hljs = require(path.join(root, "docs", "theme", "highlight.js"));
-const cjTasksLanguage = require(path.join(root, "docs", "cjtaskrunner.js"));
+const cjTasksLanguage = require(path.join(root, "docs", "theme", "cjtaskrunner.js"));
 
 if (!hljs.getLanguage("cjtasks")) {
   hljs.registerLanguage("cjtasks", cjTasksLanguage);

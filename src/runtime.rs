@@ -75,7 +75,10 @@ impl RuntimeEnv {
 
     pub(crate) fn export(&mut self, key: String, value: String) {
         self.vars.insert(key.clone(), value.clone());
-        self.exports.lock().expect("exports lock").insert(key, value);
+        self.exports
+            .lock()
+            .expect("exports lock")
+            .insert(key, value);
     }
 
     pub(crate) fn unset(&mut self, key: &str) {

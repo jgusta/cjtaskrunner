@@ -34,10 +34,7 @@ pub fn run_cj(dir: &Path, args: &[&str]) -> Output {
 
 pub fn run_cj_with_env(dir: &Path, args: &[&str], envs: &[(&str, &str)]) -> Output {
     let mut command = Command::new(env!("CARGO_BIN_EXE_cj"));
-    command
-        .args(args)
-        .current_dir(dir)
-        .env("NO_COLOR", "1");
+    command.args(args).current_dir(dir).env("NO_COLOR", "1");
     for (key, value) in envs {
         command.env(key, value);
     }
