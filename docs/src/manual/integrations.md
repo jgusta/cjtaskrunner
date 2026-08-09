@@ -26,7 +26,7 @@ test:
 ```
 
 See the
-[Python virtual environment example](../../example_tasks/python-venv/README.md).
+[Python virtual environment example](../../../example_tasks/python-venv/README.md).
 
 ## Node and Vite
 
@@ -45,7 +45,7 @@ check:
   npm run build
 ```
 
-See the [Vite example](../../example_tasks/node-vite/README.md).
+See the [Vite example](../../../example_tasks/node-vite/README.md).
 
 ## Rust and Cargo
 
@@ -58,7 +58,7 @@ check:
   cargo clippy --all-targets --all-features --locked -- -D warnings
 ```
 
-See the [Rust CLI example](../../example_tasks/rust-cli/README.md).
+See the [Rust CLI example](../../../example_tasks/rust-cli/README.md).
 
 ## Continuous integration
 
@@ -75,6 +75,6 @@ callable without appearing in summary mode.
 
 ## Editors
 
-The [VS Code extension](../../editors/vscode-cjtaskrunner/README.md) provides syntax highlighting, Outline symbols, task execution, language-server support, formatting, and an explorer panel.
+The [VS Code extension](../../../editors/vscode-cjtaskrunner/README.md) provides syntax highlighting, Outline symbols, task execution, language-server support, formatting, and an explorer panel.
 
 See [Ecosystem](ecosystem.md).

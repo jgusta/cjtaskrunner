@@ -5,8 +5,8 @@ src = "src"
 
 [output.html]
 theme = "theme"
-default-theme = "light"
-preferred-dark-theme = "navy"
+default-theme = "dark"
+preferred-dark-theme = "CJTaskrunner"
 additional-css = ["theme/cjtaskrunner.css"]
 additional-js = ["theme/cjtaskrunner.js"]
 git-repository-url = "https://github.com/jgusta/cjtaskrunner"

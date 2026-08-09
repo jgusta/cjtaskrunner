@@ -15,7 +15,7 @@ task definitions, and formatting without requiring a second executable.
 ## VS Code extension
 
 The repository includes a
-[VS Code extension](../../editors/vscode-cjtaskrunner/README.md) for syntax
+[VS Code extension](../../../editors/vscode-cjtaskrunner/README.md) for syntax
 highlighting, Outline symbols, task discovery and execution, and integration
 with the built-in language server.
 
@@ -75,12 +75,11 @@ See [CLI Reference](../reference/cli.md).
 
 ## Example projects
 
-The [`example_tasks`](../../example_tasks/README.md) directory contains taskfiles
+The [`example_tasks`](../../../example_tasks/README.md) directory contains taskfiles
 for Rust, Node, Python, Docker, and other common project layouts.
 
 ## Syntax Highlighting
 
 ### VSCode extension
 The official extension brings syntax highlighting, formatting, taskfile comprehension and more to Visual Studio Code.
-
 

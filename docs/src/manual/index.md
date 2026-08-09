@@ -1,16 +1,4 @@
-# CJTaskrunner
-
-<div style="display:flex;align-items:center;justify-content:center;margin-bottom:0;">
-  <img src="../logo/cj-logo-color-f.svg" alt="CJTaskrunner logo" style="margin:0;display:block;height:auto;width:80px;" />
-  <img src="../logo/cj-words.svg" alt="CJTaskrunner words logo" style="margin:0;display:block;width:320px;height:auto;" />
-</div>
-<div style="margin:0;text-align:center;font-size:1.4em;">
-  Independent task wrangler
-</div>
-<div style="display:flex;align-items:center;justify-content:center;margin-bottom:0;">
-  <img alt="license" src="https://img.shields.io/github/license/jgusta/cjtaskrunner">
-  <img alt="version" src="https://img.shields.io/github/v/release/jgusta/cjtaskrunner">
-</div>
+# Manual
 
 ## First Taskfile
 

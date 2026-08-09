@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html lang="{{ language }}" class="{{ default_theme }} sidebar-visible" dir="{{ text_direction }}">
     <head>
-        <!-- Book generated using mdBook -->
+
         <meta charset="UTF-8">
         <title>{{ title }}</title>
         {{#if is_print }}
@@ -12,7 +12,7 @@
         {{/if}}
 
 
-        <!-- Custom HTML head -->
+
         {{> head}}
 
         <meta name="description" content="{{ description }}">
@@ -77,7 +77,6 @@
         </div>
     </div>
     <div id="mdbook-body-container">
-        <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
                 let theme = localStorage.getItem('mdbook-theme');
@@ -93,7 +92,6 @@
             } catch (e) { }
         </script>
 
-        <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
             const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
             let theme;

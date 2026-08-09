@@ -1,10 +1,6 @@
 # Summary
 
-
-
-# Docs
-
-[Introduction](index.md)
+- [Introduction](index.md)
 - [Manual](manual/index.md)
 - [Ecosystem](manual/ecosystem.md)
 - [Integrations](manual/integrations.md)
