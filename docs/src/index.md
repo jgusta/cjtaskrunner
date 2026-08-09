@@ -31,9 +31,19 @@ project names.
 
 {{#toc}}{{/toc}}
 
+## Install
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/jgusta/cjtaskrunner/main/install.sh | bash
+```
+
+See [Install](install.md) for Homebrew, source builds, versions, and install
+directory options.
+
 
 ## Start Here
 
+- [Install](install.md) - get the `cj` executable.
 - [Manual](manual/index.md) - common taskfile patterns.
 - [Integrations](manual/integrations.md) - wrap npm, Cargo, Python,
   Docker, and CI commands.

@@ -1,0 +1,21 @@
+name: Installs
+on:
+  workflow_dispatch:
+jobs:
+  install-script:
+    name: Test Install Script
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run install script
+        run: 'curl -sSL https://raw.githubusercontent.com/jgusta/cjtaskrunner/main/install.sh | bash'
+      - name: Run cj
+        run: 'cd ~ && cj --version'
+
+  homebrew:
+    name: Test Homebrew
+    runs-on: macos-15
+    steps: 
+      - name: Install cj
+        run: 'cd ~ && brew install jgusta/cjtaskrunner/cj'
+      - name: Run cj
+        run: 'cd ~ && cj --version'

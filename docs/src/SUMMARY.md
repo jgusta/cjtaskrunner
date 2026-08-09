@@ -1,6 +1,7 @@
 # Summary
 
 - [Introduction](index.md)
+- [Install](install.md)
 - [Manual](manual/index.md)
 - [Ecosystem](manual/ecosystem.md)
 - [Integrations](manual/integrations.md)

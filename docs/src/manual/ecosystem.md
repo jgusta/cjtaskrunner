@@ -21,44 +21,7 @@ with the built-in language server.
 
 ## Installation
 
-### Homebrew
-CJTaskrunner can be installed from the project tap:
-
-```sh
-brew install jgusta/cjtaskrunner
-```
-
-### "YOLO"-style install with cURL and shell script
-
-We are obligated to tell you that you shouldn't run untrusted scripts directly from the internet.
-
-You can ignore this warning and install CJTaskrunner by using this command which runs a script directly from the internet:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/jgusta/cjtaskrunner/main/install.sh | bash
-```
-
-This script installs the latest release into `$CJ_INSTALL_DIR`, `$XDG_BIN_HOME/` or `$HOME/.local/bin` in that order, if found.
-
-It supports Linux x86_64 and Mac Intel and Apple Silicon. It verifies the archive against the release `SHA256SUMS` file. 
-
-### Download from Github
-Official releases are available on Github ([https://jgusta/cjtaskrunner](https://github.com/jgusta/cjtaskrunner))
-
-
-### Add your path
-
-Make sure the install directory is in your PATH. So if your install directory is `$HOME/.local/bin`, add with:
-
-`bash/zsh`:
-```sh
-export PATH="$HOME/.local/bin:$PATH"`
-```
-
-`fish`
-```sh
-fish_add_path -Ux $HOME/.local/bin:$PATH
-```
+See [Install](../install.md).
 
 ## Shell completion
 
@@ -82,4 +45,3 @@ for Rust, Node, Python, Docker, and other common project layouts.
 
 ### VSCode extension
 The official extension brings syntax highlighting, formatting, taskfile comprehension and more to Visual Studio Code.
-
