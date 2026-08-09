@@ -10,10 +10,16 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
-SUMMARY = DOCS / "SUMMARY.md"
+DOCS_SRC = DOCS / "src"
+SUMMARY = DOCS_SRC / "SUMMARY.md"
 BOOK_CONFIG = DOCS / "book.toml"
-BOOK_CSS = DOCS / "cjtaskrunner.css"
-BOOK_JS = DOCS / "cjtaskrunner.js"
+THEME = DOCS / "theme"
+BOOK_CSS = THEME / "cjtaskrunner.css"
+BOOK_JS = THEME / "cjtaskrunner.js"
+SOURCE_ASSETS = [
+    THEME / "cj-logo-color-f.svg",
+    THEME / "cj-words.svg",
+]
 LOGO = ROOT / "logo" / "cj-logo-color-d.svg"
 STAGE = Path(
     os.environ.get("CJ_DOCS_STAGE_DIR", ROOT / "target/docs-book")
@@ -41,7 +47,7 @@ def require_tool(command: str, message: str) -> None:
 
 
 def reset_stage() -> None:
-    protected = {ROOT.resolve(), DOCS.resolve(), ROOT.parent.resolve()}
+    protected = {ROOT.resolve(), THEME.resolve(), DOCS.resolve(), ROOT.parent.resolve()}
     if STAGE in protected:
         fail(f"refusing to replace protected path {STAGE}")
     if STAGE.exists():
@@ -92,13 +98,11 @@ def transform_markdown(path: Path) -> str:
 
 
 def copy_documentation() -> None:
-    for source in sorted(DOCS.rglob("*")):
+    for source in sorted(DOCS_SRC.rglob("*")):
         if not source.is_file():
             continue
-        relative = source.relative_to(DOCS)
+        relative = source.relative_to(DOCS_SRC)
         if any(part.startswith(".") for part in relative.parts):
-            continue
-        if source in {BOOK_CONFIG, BOOK_CSS, BOOK_JS}:
             continue
 
         destination = STAGE / "src" / relative
@@ -109,6 +113,27 @@ def copy_documentation() -> None:
             destination.write_text(transform_markdown(source), encoding="utf-8")
         else:
             shutil.copy2(source, destination)
+
+
+def copy_theme() -> None:
+    for source in sorted(THEME.rglob("*")):
+        if not source.is_file():
+            continue
+        relative = source.relative_to(THEME)
+        if any(part.startswith(".") for part in relative.parts):
+            continue
+        destination = STAGE / "theme" / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+
+
+def copy_source_assets() -> None:
+    for source in SOURCE_ASSETS:
+        if not source.is_file():
+            fail(f"book asset is missing: {source.relative_to(ROOT)}")
+        destination = STAGE / "src/theme" / source.name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
 
 
 def render_logo(destination: Path, size: int) -> None:
@@ -146,9 +171,9 @@ def prepare() -> None:
 
     reset_stage()
     copy_documentation()
+    copy_theme()
+    copy_source_assets()
     shutil.copy2(BOOK_CONFIG, STAGE / "book.toml")
-    shutil.copy2(BOOK_CSS, STAGE / "theme/cjtaskrunner.css")
-    shutil.copy2(BOOK_JS, STAGE / "theme/cjtaskrunner.js")
     render_logo(STAGE / "src/cjtaskrunner-logo.png", 320)
     render_logo(STAGE / "theme/favicon.png", 64)
 
@@ -167,17 +192,20 @@ def serve() -> None:
     require_tool(MDBOOK, "mdbook is required; install mdBook 0.5.3")
     prepare()
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        [
-            MDBOOK,
-            "serve",
-            str(STAGE),
-            "--dest-dir",
-            str(OUTPUT),
-            "--open",
-        ],
-        check=True,
-    )
+    try:
+        subprocess.run(
+            [
+                MDBOOK,
+                "serve",
+                str(STAGE),
+                "--dest-dir",
+                str(OUTPUT),
+                "--open",
+            ],
+            check=True,
+        )
+    except KeyboardInterrupt:
+        print("\nStopping mdBook server...")
 
 
 def main() -> None:

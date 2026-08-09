@@ -76,7 +76,7 @@ fn markdown_links(source: &str) -> Vec<String> {
 #[test]
 fn every_directive_is_documented_once_on_the_single_directives_page() {
     let root = repository_root();
-    let page_path = root.join("docs/reference/directives.md");
+    let page_path = root.join("docs/src/reference/directives.md");
     let page = fs::read_to_string(&page_path).expect("read directive reference");
 
     assert!(
@@ -153,7 +153,7 @@ fn every_if_directive_has_a_matching_if_not_directive() {
 fn user_documentation_uses_cjtasks_fences_for_taskfiles() {
     let root = repository_root();
     let mut files = vec![root.join("README.md")];
-    markdown_files(&root.join("docs"), &mut files);
+    markdown_files(&root.join("docs/src"), &mut files);
 
     for path in files {
         let source = fs::read_to_string(&path).expect("read markdown");
@@ -169,7 +169,7 @@ fn user_documentation_uses_cjtasks_fences_for_taskfiles() {
 fn local_documentation_links_resolve() {
     let root = repository_root();
     let mut files = vec![root.join("README.md")];
-    markdown_files(&root.join("docs"), &mut files);
+    markdown_files(&root.join("docs/src"), &mut files);
 
     for path in files {
         let source = fs::read_to_string(&path).expect("read markdown");

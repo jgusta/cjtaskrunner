@@ -7,7 +7,7 @@ SOURCE="$ROOT/logo/cj-logo-color-d.svg"
 DESTINATION="$ROOT/editors/vscode-cjtaskrunner/icon.png"
 
 command -v "$CONVERTER" >/dev/null 2>&1 || {
-  printf 'extension-icon: rsvg-convert is required; install librsvg\n' >&2
+  printf 'extension-i3con: rsvg-convert is required; install librsvg\n' >&2
   exit 1
 }
 
@@ -17,3 +17,5 @@ test -f "$SOURCE" || {
 }
 
 "$CONVERTER" -w 256 -h 256 "$SOURCE" -o "$DESTINATION"
+
+cd $ROOT
