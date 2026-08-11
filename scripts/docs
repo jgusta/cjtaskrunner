@@ -6,7 +6,8 @@ import re
 import shutil
 import subprocess
 import sys
-
+import json 
+import uuid
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
@@ -26,6 +27,12 @@ STAGE = Path(
 ).expanduser().resolve()
 OUTPUT = Path(
     os.environ.get("CJ_DOCS_OUTPUT_DIR", ROOT / "dist/docs")
+).expanduser().resolve()
+CHROME_DEVTOOLS_URL = Path(
+    ".well-known/appspecific/com.chrome.devtools.json"
+)
+CHROME_DEVTOOLS_DEST = Path(
+    STAGE / "src" / CHROME_DEVTOOLS_URL
 ).expanduser().resolve()
 CONVERTER = os.environ.get("CJ_DOCS_RSVG_CONVERT", "rsvg-convert")
 MDBOOK = os.environ.get("CJ_DOCS_MDBOOK", "mdbook")
@@ -177,6 +184,23 @@ def prepare() -> None:
     render_logo(STAGE / "src/cjtaskrunner-logo.png", 320)
     render_logo(STAGE / "theme/favicon.png", 64)
 
+def build_chrome_dev_tools() :
+    CHROME_DEVTOOLS_DEST.parent.parent.parent.parent.mkdir(parents=True, exist_ok=True)
+    CHROME_DEVTOOLS_DEST.parent.parent.parent.mkdir(parents=True, exist_ok=True)
+    CHROME_DEVTOOLS_DEST.parent.parent.mkdir(parents=True, exist_ok=True)
+    CHROME_DEVTOOLS_DEST.parent.mkdir(parents=True, exist_ok=True)
+    with open(CHROME_DEVTOOLS_DEST, "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "workspace": {
+                    "root": str(DOCS.resolve()),
+                    "uuid": str(uuid.uuid4()),
+                }
+            },
+            f,
+            indent=2,
+        )
+
 
 def build() -> None:
     require_tool(MDBOOK, "mdbook is required; install mdBook 0.5.3")
@@ -192,6 +216,7 @@ def serve() -> None:
     require_tool(MDBOOK, "mdbook is required; install mdBook 0.5.3")
     prepare()
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    build_chrome_dev_tools()
     try:
         subprocess.run(
             [
