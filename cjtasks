@@ -1,4 +1,4 @@
-@version cli 0.0.0
+@version cli 0.1.0
 @version extension 0.0.0
 @help:
   Maintainer tasks for CJTaskrunner.
