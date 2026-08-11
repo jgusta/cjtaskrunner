@@ -355,3 +355,25 @@ fn github_workflow_publishes_verified_cli_tags() {
         );
     }
 }
+
+#[test]
+fn homebrew_workflow_requires_a_version_tag() {
+    let workflow = fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join(".github/workflows/update-homebrew.yml"),
+    )
+    .expect("read Homebrew workflow");
+
+    for required in [
+        "tag:",
+        "required: true",
+        "RELEASE_TAG: ${{ inputs.tag || github.ref_name }}",
+        "^v[0-9]+\\.[0-9]+\\.[0-9]+",
+        "curl --fail --location",
+        "Formula URL was not updated",
+    ] {
+        assert!(
+            workflow.contains(required),
+            "Homebrew workflow missing release-tag safeguard: {required}"
+        );
+    }
+}
