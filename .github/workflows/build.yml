@@ -176,4 +176,5 @@ jobs:
           gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
             --verify-tag \
             --generate-notes \
-            --title "$GITHUB_REF_NAME"
+            --latest \
+            --title "CJTaskrunner $GITHUB_REF_NAME"

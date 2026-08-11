@@ -1,0 +1,97 @@
+@version cli 0.0.0
+@version extension 0.0.0
+@help:
+  Maintainer tasks for CJTaskrunner.
+
+  Use release:prep patch to prepare the next CLI patch release.
+  Use release:show before publishing.
+
+build:
+  @desc build cli
+  cargo build --bin cj
+
+install:
+  @desc build and install cli
+  cargo install --path .
+
+
+release:
+  @desc prepare and publish CLI releases
+  prep (VLEV):
+    @desc bump, test, commit tag
+    scripts/release-cli preflight
+    @task bump $VLEV cli
+    @task release:_checks
+    scripts/release-cli verify $VERSION_CLI
+    scripts/release-cli commit-tag $VERSION_CLI
+  publish:
+    @desc atomically push the prepared CLI release commit and tag
+    scripts/release-cli publish $VERSION_CLI
+  show:
+    @desc inspect the prepared CLI release commit and tag
+    git show --stat HEAD
+    git show v$VERSION_CLI
+  _checks:
+    cargo fmt --check
+    cargo test --locked
+    cargo clippy --all-targets --all-features --locked -- -D warnings
+    @cd editors/vscode-cjtaskrunner
+    npm ci
+    npm test
+
+site:
+  @desc build and preview the documentation site
+  @selfhelp
+  build:
+    @desc build the GitHub Pages site
+    scripts/docs build
+  serve:
+    @desc build and open a local documentation server
+    @watch docs
+      @task site:_serve
+  _serve:
+    scripts/docs serve
+
+extension:
+  @desc the CJTaskrunner Visual Studio Code extension
+  @help:
+    The extension is in "editors/vscode-cjtaskrunner".
+    When built, the package outputs to "dist/cjtaskrunner-vscode.vsix"
+  @selfhelp
+  package:
+    @desc build the vsix package
+    @cd editors/vscode-cjtaskrunner
+    npm install
+    ../../scripts/extension-icon
+    @back
+    @mkdir dist
+    @cd editors/vscode-cjtaskrunner
+    npm run compile
+    npx @vscode/vsce package --allow-missing-repository --out ../../dist/cjtaskrunner-vscode.vsix
+
+  install:
+    @desc install the extension locally. builds first.
+    @task extension:package
+    code --install-extension dist/cjtaskrunner-vscode.vsix --force
+
+bump (LEVEL, PACKAGE):
+  @desc Increment and propagate version number
+  @if-not-in $LEVEL patch minor major release
+    @stop expected VLEV to be patch, minor, major, or release
+  @if-not-in $PACKAGE cli extension
+    @stop expected PACKAGE to be cli or extension
+  @switch $LEVEL
+    @case patch
+      @patch $PACKAGE
+    @case minor
+      @minor $PACKAGE
+    @case major
+      @major $PACKAGE
+    @case release
+      @release $PACKAGE
+  @switch $PACKAGE
+    @case cli
+      cargo set-version $VERSION_CLI
+    @case extension
+      @cd editors/vscode-cjtaskrunner
+      npm version $VERSION_EXTENSION --no-git-tag-version

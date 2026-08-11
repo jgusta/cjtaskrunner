@@ -337,6 +337,9 @@ fn github_workflow_publishes_verified_cli_tags() {
         "GH_REPO: ${{ github.repository }}",
         "gh release create",
         "--verify-tag",
+        "--generate-notes",
+        "--latest",
+        "--title \"CJTaskrunner $GITHUB_REF_NAME\"",
         "startsWith(github.ref, 'refs/tags/v')",
     ] {
         assert!(
@@ -352,6 +355,28 @@ fn github_workflow_publishes_verified_cli_tags() {
         assert!(
             !workflow.contains(suspended),
             "workflow must not publish suspended Windows artifact: {suspended}"
+        );
+    }
+}
+
+#[test]
+fn github_release_notes_are_categorized() {
+    let configuration =
+        fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join(".github/release.yml"))
+            .expect("read release notes configuration");
+
+    for required in [
+        "skip-changelog",
+        "title: Breaking Changes",
+        "title: Features",
+        "title: Fixes",
+        "title: Documentation",
+        "title: Other Changes",
+        "- \"*\"",
+    ] {
+        assert!(
+            configuration.contains(required),
+            "release notes configuration missing category: {required}"
         );
     }
 }

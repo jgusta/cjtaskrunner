@@ -1,6 +1,6 @@
 <div align="center" style="display:flex;align-items:center;justify-content:center;margin-bottom:0;">
-  <img src="logo/cj-logo-color-f.svg" alt="CJTaskrunner logo" style="margin:0;display:block;height:auto;width:80px;" />
-  <img src="logo/cj-words.svg" alt="CJTaskrunner words logo" style="margin:0;display:block;width:320px;height:auto;" />
+  <img src="logo/cj-logo-color-f.svg" alt="CJTaskrunner logo" style="margin:0;display:block;height:auto;height:80px;" />
+  <img src="logo/cj-words.svg" alt="CJTaskrunner words logo" style="margin:0;display:block;width:auto;height:80px;" />
 </div>
 <div align="center" style="margin:0;text-align:center;font-size:1.4em;">
   Independent task wrangler
