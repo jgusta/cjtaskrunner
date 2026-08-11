@@ -1,34 +1,30 @@
 # CJTaskrunner VS Code Extension
 
-Language support and task execution tools for CJTaskrunner taskfiles.
+Language support and task execution tools for [CJTaskrunner](https://github.com/jgusta/cjtaskrunner) taskfiles.
 
 ## Features
 
-- Syntax highlighting for CJTaskrunner task files.
+- Syntax highlighting for CJTaskrunner `cjtasks` task files.
 - Diagnostics, document symbols, directive hovers, task/variable completions, and formatting.
 - Go-to-definition for `@task` references.
-- Explorer `CJTaskrunner` view for task discovery.
-- One-click task execution from the tree view and command palette.
-- Language server status, restart, and output commands for troubleshooting.
-- Extension-side Outline symbols when `cj lsp` is unavailable.
+- `CJTasks` panel for task discovery and execution.
+- Lightweight and optimized < 5ms startup time
 
-The Explorer task view is hidden unless a workspace root contains `cjtasks` or
-one of the standard overlay files. Root detection does not scan descendants.
-After a root taskfile enables the view, descendant folders are scanned for
-recognized taskfile names, with `cjtasks` taking precedence in each folder.
+The task panel is hidden unless a workspace root contains `cjtasks` or
+one of the standard overlay files. 
 
-Creating the first root taskfile in an already-open workspace may require
-opening that file or reloading the window so VS Code activates the extension.
+It will also scan for descendant task files if and only if a taskfile is found at the directory root.
+
+After creating the `cjtasks` file, the panel may not appear until a reload. This is deliberate to keep the extension as light as possible.
 
 ## Requirements
 
 - VS Code `1.85.0` or newer.
-- `cj` installed on `PATH`, or configured with `cjtaskrunner.path`.
+- CJTaskrunner executable `cj`.
 
 ## Extension Settings
 
-- `cjtaskrunner.path`: Path to `cj`. Empty uses `cj` from `PATH`; relative paths resolve from the first workspace folder.
-- `cjtaskrunner.lsp.trace.server`: LSP trace mode (`off`, `messages`, `verbose`).
+- `cjtaskrunner.path`: Path to `cj`. Leave empty to use `cj` from `PATH`.
 
 ## Syntax Scopes
 
@@ -45,7 +41,7 @@ CJTaskrunner emits theme-controlled TextMate scopes:
 - Single-quoted string -> `string.quoted.single.cjtasks`
 - @help: or @desc prose -> `comment.block.documentation.cjtasks`
 
-Themes choose the colors and font styles for these scopes. Only lines whose first non-whitespace character is `#` are comments. Variable-shaped text keeps its variable scope inside documentation prose so invalid references remain visible, but CJTaskrunner rejects variables in `@desc` and `@help:` text.
+Variable-shaped text keeps its variable scope inside documentation prose so invalid references remain visible, but CJTaskrunner rejects variables in `@desc` and `@help:` text.
 
 ## Commands
 
@@ -53,21 +49,3 @@ Themes choose the colors and font styles for these scopes. Only lines whose firs
 - `CJTaskrunner: Restart Language Server`: Stop and start `cj lsp` after changing settings or rebuilding the binary.
 - `CJTaskrunner: Show Language Server Output`: Open the language server output channel.
 
-## Development
-
-From repository root:
-
-```sh
-cargo build --bin cj
-cargo install --path .
-cd editors/vscode-cjtaskrunner
-npm install
-npm run compile
-code .
-```
-
-Ensure `cj` is on `PATH`, or set `cjtaskrunner.path` in the Extension Development Host settings. The extension starts the language server with `cj lsp`. Press `F5` in VS Code to launch an Extension Development Host.
-
-## Marketplace Release Notes
-
-Release history is tracked in [`CHANGELOG.md`](./CHANGELOG.md). Marketplace publishing steps are tracked in [`MARKETPLACE_PREP.md`](./MARKETPLACE_PREP.md).
