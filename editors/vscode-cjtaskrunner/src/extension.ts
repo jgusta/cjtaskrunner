@@ -19,6 +19,7 @@ type CjLanguageServerManager = import("./languageServer.js").CjLanguageServerMan
 
 let languageServer: LazyLanguageServer | undefined;
 let taskProvider: CjTaskProvider | undefined;
+let taskTerminal: vscode.Terminal | undefined;
 const HAS_ROOT_TASKFILE_CONTEXT = "cjtaskrunner.hasRootTaskfile";
 
 type TaskFileEntry = {
@@ -59,6 +60,11 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.createTreeView("cjtaskrunner.tasks", {
       treeDataProvider: taskProvider,
       showCollapseAll: true
+    }),
+    vscode.window.onDidCloseTerminal((terminal) => {
+      if (terminal === taskTerminal) {
+        taskTerminal = undefined;
+      }
     }),
     vscode.commands.registerCommand("cjtaskrunner.refreshTasks", () => taskProvider?.refresh()),
     vscode.commands.registerCommand("cjtaskrunner.runTask", (entry?: TreeEntry) => {
@@ -380,7 +386,7 @@ async function readTasks(uri: vscode.Uri): Promise<TaskEntry[]> {
   }
 }
 
-async function runTreeEntry(_context: vscode.ExtensionContext, entry?: TreeEntry): Promise<void> {
+async function runTreeEntry(context: vscode.ExtensionContext, entry?: TreeEntry): Promise<void> {
   if (!entry) {
     entry = await pickTask();
     if (!entry) {
@@ -395,12 +401,15 @@ async function runTreeEntry(_context: vscode.ExtensionContext, entry?: TreeEntry
   }
 
   const runnerPath = resolveConfiguredExecutablePath(entry.file.uri).command;
-  const terminal = vscode.window.createTerminal({
-    name: `CJTaskrunner: ${entry.task.name}`,
-    cwd: entry.file.workspaceFolder?.uri.fsPath ?? path.dirname(entry.file.uri.fsPath)
-  });
-  terminal.show();
-  terminal.sendText(`${shellQuote(runnerPath)} ${shellQuote(entry.file.uri.fsPath)} ${shellQuote(entry.task.name)}`);
+  if (!taskTerminal) {
+    taskTerminal = vscode.window.createTerminal({
+      name: "CJTaskrunner",
+      cwd: entry.file.workspaceFolder?.uri.fsPath ?? path.dirname(entry.file.uri.fsPath)
+    });
+    context.subscriptions.push(taskTerminal);
+  }
+  taskTerminal.show();
+  taskTerminal.sendText(`${shellQuote(runnerPath)} ${shellQuote(entry.file.uri.fsPath)} ${shellQuote(entry.task.name)}`);
 }
 
 async function openTreeEntry(entry: TreeEntry): Promise<void> {

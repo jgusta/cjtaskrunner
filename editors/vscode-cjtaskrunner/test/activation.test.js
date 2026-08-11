@@ -88,3 +88,17 @@ assert.ok(
   extensionSource.includes('command: "cjtaskrunner.openTask"'),
   "active task rows must open their definitions"
 );
+assert.ok(
+  extensionSource.includes("let taskTerminal: vscode.Terminal | undefined"),
+  "task runs must retain an extension-owned terminal for reuse"
+);
+assert.ok(
+  extensionSource.includes("if (!taskTerminal)")
+    && extensionSource.includes('name: "CJTaskrunner"'),
+  "task runs must reuse one stable CJTaskrunner terminal"
+);
+assert.ok(
+  extensionSource.includes("vscode.window.onDidCloseTerminal")
+    && extensionSource.includes("taskTerminal = undefined"),
+  "closing the shared task terminal must allow it to be recreated"
+);
