@@ -322,10 +322,11 @@ aria-label="Show hidden lines"></button>';
     const themeToggleButton = document.getElementById('mdbook-theme-toggle');
     const themePopup = document.getElementById('mdbook-theme-list');
     const themeColorMetaTag = document.querySelector('meta[name="theme-color"]');
-    const themeIds = [];
-    themePopup.querySelectorAll('button.theme').forEach(function(el) {
-        themeIds.push(el.id);
-    });
+    const themeIds = themePopup
+        ? Array.from(themePopup.querySelectorAll('button.theme'), function(el) { return el.id; })
+        : ['mdbook-theme-default_theme', 'mdbook-theme-light', 'mdbook-theme-rust',
+            'mdbook-theme-coal', 'mdbook-theme-navy', 'mdbook-theme-ayu'];
+
     const stylesheets = {
         ayuHighlight: document.querySelector('#mdbook-ayu-highlight-css'),
         tomorrowNight: document.querySelector('#mdbook-tomorrow-night-css'),
@@ -339,6 +340,9 @@ aria-label="Show hidden lines"></button>';
     }
 
     function updateThemeSelected() {
+        if (!themePopup) {
+            return;
+        }
         themePopup.querySelectorAll('.theme-selected').forEach(function(el) {
             el.classList.remove('theme-selected');
         });
@@ -441,6 +445,10 @@ aria-label="Show hidden lines"></button>';
     // Set theme.
     set_theme(get_theme(), false);
 
+    if (!themeToggleButton || !themePopup) {
+        return;
+    }
+
     themeToggleButton.addEventListener('click', function() {
         if (themePopup.style.display === 'block') {
             hideThemes();
@@ -533,35 +541,23 @@ aria-label="Show hidden lines"></button>';
     const sidebar = document.getElementById('mdbook-sidebar');
     const sidebarLinks = document.querySelectorAll('#mdbook-sidebar a');
     const sidebarToggleButton = document.getElementById('mdbook-sidebar-toggle');
-    const sidebarResizeHandle = document.getElementById('mdbook-sidebar-resize-handle');
     const sidebarCheckbox = document.getElementById('mdbook-sidebar-toggle-anchor');
+    const mobileSidebar = window.matchMedia('(max-width: 800px)');
     let firstContact = null;
 
 
-    /* Because we cannot change the `display` using only CSS after/before the transition, we
-       need JS to do it. We change the display to prevent the browsers search to find text inside
-       the collapsed sidebar. */
+    /* Keep collapsed sidebar content out of browser search and keyboard navigation. */
     if (!document.documentElement.classList.contains('sidebar-visible')) {
         sidebar.style.display = 'none';
     }
-    sidebar.addEventListener('transitionend', () => {
-        /* We only change the display to "none" if we're collapsing the sidebar. */
-        if (!sidebarCheckbox.checked) {
-            sidebar.style.display = 'none';
-        }
-    });
     sidebarToggleButton.addEventListener('click', () => {
-        /* To allow the sidebar expansion animation, we first need to put back the display. */
         if (!sidebarCheckbox.checked) {
             sidebar.style.display = '';
-            // Workaround for Safari skipping the animation when changing
-            // `display` and a transform in the same event loop. This forces a
-            // reflow after updating the display.
-            sidebar.offsetHeight;
         }
     });
 
     function showSidebar() {
+        sidebar.style.display = '';
         document.documentElement.classList.add('sidebar-visible');
         Array.from(sidebarLinks).forEach(function(link) {
             link.setAttribute('tabIndex', 0);
@@ -577,6 +573,7 @@ aria-label="Show hidden lines"></button>';
 
     function hideSidebar() {
         document.documentElement.classList.remove('sidebar-visible');
+        sidebar.style.display = 'none';
         Array.from(sidebarLinks).forEach(function(link) {
             link.setAttribute('tabIndex', -1);
         });
@@ -592,42 +589,22 @@ aria-label="Show hidden lines"></button>';
     // Toggle sidebar
     sidebarCheckbox.addEventListener('change', function sidebarToggle() {
         if (sidebarCheckbox.checked) {
-            const current_width = parseInt(
-                document.documentElement.style.getPropertyValue('--sidebar-target-width'), 10);
-            if (current_width < 150) {
-                document.documentElement.style.setProperty('--sidebar-target-width', '150px');
-            }
             showSidebar();
         } else {
             hideSidebar();
         }
     });
 
-    sidebarResizeHandle.addEventListener('mousedown', initResize, false);
-
-    function initResize() {
-        window.addEventListener('mousemove', resize, false);
-        window.addEventListener('mouseup', stopResize, false);
-        document.documentElement.classList.add('sidebar-resizing');
-    }
-    function resize(e) {
-        let pos = e.clientX - sidebar.offsetLeft;
-        if (pos < 20) {
-            hideSidebar();
-        } else {
-            if (!document.documentElement.classList.contains('sidebar-visible')) {
-                showSidebar();
-            }
-            pos = Math.min(pos, window.innerWidth - 100);
-            document.documentElement.style.setProperty('--sidebar-target-width', pos + 'px');
+    function closeMobileSidebar(event) {
+        if (!event.matches) {
+            return;
         }
+        sidebarCheckbox.checked = false;
+        hideSidebar();
     }
-    //on mouseup remove windows functions mousemove & mouseup
-    function stopResize() {
-        document.documentElement.classList.remove('sidebar-resizing');
-        window.removeEventListener('mousemove', resize, false);
-        window.removeEventListener('mouseup', stopResize, false);
-    }
+    mobileSidebar.addEventListener('change', closeMobileSidebar);
+    window.addEventListener('resize', () => closeMobileSidebar(mobileSidebar));
+    closeMobileSidebar(mobileSidebar);
 
     document.addEventListener('touchstart', function(e) {
         firstContact = {

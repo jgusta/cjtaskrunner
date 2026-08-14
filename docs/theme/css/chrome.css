@@ -493,7 +493,8 @@ html:not(.sidebar-resizing) .sidebar {
     right: 0;
     padding: 10px 10px;
 }
-.sidebar .sidebar-resize-handle {
+
+.sidebar-resize-handle {
     position: absolute;
     cursor: col-resize;
     width: 0;

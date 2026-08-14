@@ -7,12 +7,13 @@ src = "src"
 theme = "theme"
 default-theme = "dark"
 preferred-dark-theme = "CJTaskrunner"
-additional-css = ["theme/cjtaskrunner.css"]
+additional-css = ["theme/css/cjtaskrunner.css"]
 additional-js = ["theme/cjtaskrunner.js"]
 git-repository-url = "https://github.com/jgusta/cjtaskrunner"
 site-url = "/cjtaskrunner/"
 # no-section-label = true
 sidebar-header-nav = true
+# hash-files = false
 
 [output.html.search]
 enable = true

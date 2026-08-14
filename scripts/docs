@@ -15,7 +15,7 @@ DOCS_SRC = DOCS / "src"
 SUMMARY = DOCS_SRC / "SUMMARY.md"
 BOOK_CONFIG = DOCS / "book.toml"
 THEME = DOCS / "theme"
-BOOK_CSS = THEME / "cjtaskrunner.css"
+BOOK_CSS = THEME / "css" / "cjtaskrunner.css"
 BOOK_JS = THEME / "cjtaskrunner.js"
 SOURCE_ASSETS = [
     THEME / "cj-logo-color-f.svg",
@@ -193,7 +193,7 @@ def build_chrome_dev_tools() :
         json.dump(
             {
                 "workspace": {
-                    "root": str(DOCS.resolve()),
+                    "root": str(DOCS.resolve() / "theme"),
                     "uuid": str(uuid.uuid4()),
                 }
             },

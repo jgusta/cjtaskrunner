@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="{{ language }}" class="{{ default_theme }} sidebar-visible" dir="{{ text_direction }}">
+<html lang="{{ language }}" class="cjt sidebar-visible" dir="{{ text_direction }}">
     <head>
 
         <meta charset="UTF-8">
@@ -10,8 +10,6 @@
         {{#if base_url}}
         <base href="{{ base_url }}">
         {{/if}}
-
-
 
         {{> head}}
 
@@ -31,7 +29,6 @@
         {{#if print_enable}}
         <link rel="stylesheet" href="{{ resource "css/print.css" }}" media="print">
         {{/if}}
-
         <!-- Fonts -->
         <link rel="stylesheet" href="{{ resource "fonts/fonts.css" }}">
 
@@ -63,21 +60,23 @@
         <script src="{{ resource "toc.js" }}"></script>
     </head>
     <body>
-    <div id="mdbook-help-container">
-        <div id="mdbook-help-popup">
-            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
-            <div>
-                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
-                {{#if search_enabled}}
-                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
-                {{/if}}
-                <p>Press <kbd>?</kbd> to show this help</p>
-                <p>Press <kbd>Esc</kbd> to hide this help</p>
+
+        <div id="mdbook-help-container">
+            <div id="mdbook-help-popup">
+                <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+                <div>
+                    <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                    {{#if search_enabled}}
+                    <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                    {{/if}}
+                    <p>Press <kbd>?</kbd> to show this help</p>
+                    <p>Press <kbd>Esc</kbd> to hide this help</p>
+                </div>
             </div>
         </div>
-    </div>
-    <div id="mdbook-body-container">
-        <script>
+
+        <div id="mdbook-body-container">
+            <script>
             try {
                 let theme = localStorage.getItem('mdbook-theme');
                 let sidebar = localStorage.getItem('mdbook-sidebar');
@@ -92,7 +91,7 @@
             } catch (e) { }
         </script>
 
-        <script>
+            <script>
             const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
             let theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
@@ -103,13 +102,13 @@
             html.classList.add("js");
         </script>
 
-        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+            <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
 
-        <!-- Hide / unhide sidebar before it is displayed -->
-        <script>
+            <!-- Hide / unhide sidebar before it is displayed -->
+            <script>
             let sidebar = null;
             const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
-            if (document.body.clientWidth >= 1080) {
+            if (document.body.clientWidth > 800) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
             } else {
@@ -122,87 +121,97 @@
                 html.classList.remove('sidebar-visible');
             }
         </script>
-
-        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
-            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
-            <noscript>
-                <iframe class="sidebar-iframe-outer" src="{{ path_to_root }}toc.html"></iframe>
-            </noscript>
-            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
-                <div class="sidebar-resize-indicator"></div>
-            </div>
-        </nav>
-
-        <div id="mdbook-page-wrapper" class="page-wrapper">
-
-            <div class="page">
-                {{> header}}
-                <div id="mdbook-menu-bar-hover-placeholder"></div>
-                <div id="mdbook-menu-bar" class="menu-bar sticky">
-                    <div class="left-buttons">
-                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
-                            {{fa "solid" "bars"}}
+            <div class="layout">
+                <div id="grid-layout">
+                    <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+                        <label class="sidebar-close icon-button" for="mdbook-sidebar-toggle-anchor"
+                            title="Close Table of Contents" aria-label="Close Table of Contents">
+                            {{fa "solid" "xmark"}}
                         </label>
-                        {{!-- <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
-                            {{fa "solid" "paintbrush"}}
-                        </button>
-                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
-                        </ul> --}}
-                        {{#if search_enabled}}
-                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
-                            {{fa "solid" "magnifying-glass"}}
-                        </button>
-                        {{/if}}
-                    </div>
+                        <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+                        <noscript>
+                            <iframe class="sidebar-iframe-outer" src="{{ path_to_root }}toc.html"></iframe>
+                        </noscript>
+                    </nav>
 
-                    <h1 class="menu-title">{{ book_title }}</h1>
+                    <div id="mdbook-page-wrapper" class="page-wrapper">
 
-                    <div class="right-buttons">
-                        {{#if print_enable}}
-                        <a href="{{ path_to_root }}print.html" title="Print this book" aria-label="Print this book">
-                            {{fa "solid" "print" "print-button"}}
-                        </a>
-                        {{/if}}
-                        {{#if git_repository_url}}
-                        <a href="{{git_repository_url}}" title="Git repository" aria-label="Git repository">
-                            {{fa git_repository_icon_class git_repository_icon}}
-                        </a>
-                        {{/if}}
-                        {{#if git_repository_edit_url}}
-                        <a href="{{git_repository_edit_url}}" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
-                            {{fa "solid" "pencil" "git-edit-button"}}
-                        </a>
-                        {{/if}}
+                        <div class="page">
+                            {{> header}}
+                            <div id="mdbook-menu-bar-hover-placeholder"></div>
+                            <div id="mdbook-menu-bar" class="menu-bar sticky">
+                                <div class="left-buttons">
+                                    <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor"
+                                        title="Toggle Table of Contents" aria-label="Toggle Table of Contents"
+                                        aria-controls="mdbook-sidebar">
+                                        {{fa "solid" "bars"}}
+                                    </label>
+                                    {{!-- <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme"
+                                        aria-label="Change theme" aria-haspopup="true" aria-expanded="false"
+                                        aria-controls="mdbook-theme-list">
+                                        {{fa "solid" "paintbrush"}}
+                                    </button>
+                                    <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                                        <li role="none"><button role="menuitem" class="theme"
+                                                id="mdbook-theme-default_theme">Auto</button></li>
+                                        <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                                        <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                                        <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                                        <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                                        <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                                    </ul> --}}
+                                    {{#if search_enabled}}
+                                    <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)"
+                                        aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s"
+                                        aria-controls="mdbook-searchbar">
+                                        {{fa "solid" "magnifying-glass"}}
+                                    </button>
+                                    {{/if}}
+                                </div>
 
-                    </div>
-                </div>
+                                <h1 class="menu-title">{{ book_title }}</h1>
 
-                {{#if search_enabled}}
-                <div id="mdbook-search-wrapper" class="hidden">
-                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
-                        <div class="search-wrapper">
-                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
-                            <div class="spinner-wrapper">
-                                {{fa "solid" "spinner" "fa-spin"}}
+                                <div class="right-buttons">
+                                    {{#if print_enable}}
+                                    <a href="{{ path_to_root }}print.html" title="Print this book" aria-label="Print this book">
+                                        {{fa "solid" "print" "print-button"}}
+                                    </a>
+                                    {{/if}}
+                                    {{#if git_repository_url}}
+                                    <a href="{{git_repository_url}}" title="Git repository" aria-label="Git repository">
+                                        {{fa git_repository_icon_class git_repository_icon}}
+                                    </a>
+                                    {{/if}}
+                                    {{#if git_repository_edit_url}}
+                                    <a href="{{git_repository_edit_url}}" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                                        {{fa "solid" "pencil" "git-edit-button"}}
+                                    </a>
+                                    {{/if}}
+
+                                </div>
                             </div>
-                        </div>
-                    </form>
-                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
-                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
-                        <ul id="mdbook-searchresults">
-                        </ul>
-                    </div>
-                </div>
-                {{/if}}
 
-                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
-                <script>
+                            {{#if search_enabled}}
+                            <div id="mdbook-search-wrapper" class="hidden">
+                                <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                                    <div class="search-wrapper">
+                                        <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..."
+                                            aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                                        <div class="spinner-wrapper">
+                                            {{fa "solid" "spinner" "fa-spin"}}
+                                        </div>
+                                    </div>
+                                </form>
+                                <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                                    <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                                    <ul id="mdbook-searchresults">
+                                    </ul>
+                                </div>
+                            </div>
+                            {{/if}}
+
+                            <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                            <script>
                     document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
                     document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
                     Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
@@ -210,71 +219,76 @@
                     });
                 </script>
 
-                <div id="mdbook-content" class="content">
-                    <main>
-                        {{{ content }}}
-                    </main>
+                            <div id="mdbook-content" class="content">
+                                <main>
+                                    {{{ content }}}
+                                </main>
 
-                    <nav class="nav-wrapper" aria-label="Page navigation">
-                        <!-- Mobile navigation buttons -->
-                        {{#if previous}}
-                            <a rel="prev" href="{{ path_to_root }}{{previous.link}}" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <nav class="nav-wrapper" aria-label="Page navigation">
+                                    <!-- Mobile navigation buttons -->
+                                    {{#if previous}}
+                                    <a rel="prev" href="{{ path_to_root }}{{previous.link}}" class="mobile-nav-chapters previous"
+                                        title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                        {{#if (eq ../text_direction "rtl")}}
+                                        {{fa "solid" "angle-right"}}
+                                        {{else}}
+                                        {{fa "solid" "angle-left"}}
+                                        {{/if}}
+                                    </a>
+                                    {{/if}}
+
+                                    {{#if next}}
+                                    <a rel="next prefetch" href="{{ path_to_root }}{{next.link}}" class="mobile-nav-chapters next"
+                                        title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                        {{#if (eq ../text_direction "rtl")}}
+                                        {{fa "solid" "angle-left"}}
+                                        {{else}}
+                                        {{fa "solid" "angle-right"}}
+                                        {{/if}}
+                                    </a>
+                                    {{/if}}
+
+                                    <div style="clear: both"></div>
+                                </nav>
+                            </div>
+                        </div>
+
+                        <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                            {{#if previous}}
+                            <a rel="prev" href="{{ path_to_root }}{{previous.link}}" class="nav-chapters previous" title="Previous chapter"
+                                aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 {{#if (eq ../text_direction "rtl")}}
                                 {{fa "solid" "angle-right"}}
                                 {{else}}
                                 {{fa "solid" "angle-left"}}
                                 {{/if}}
                             </a>
-                        {{/if}}
+                            {{/if}}
 
-                        {{#if next}}
-                            <a rel="next prefetch" href="{{ path_to_root }}{{next.link}}" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                {{#if (eq ../text_direction "rtl")}}
+                            {{#if next}}
+                            <a rel="next prefetch" href="{{ path_to_root }}{{next.link}}" class="nav-chapters next" title="Next chapter"
+                                aria-label="Next chapter" aria-keyshortcuts="Right">
+                                {{#if (eq text_direction "rtl")}}
                                 {{fa "solid" "angle-left"}}
                                 {{else}}
                                 {{fa "solid" "angle-right"}}
                                 {{/if}}
                             </a>
-                        {{/if}}
+                            {{/if}}
+                        </nav>
 
-                        <div style="clear: both"></div>
-                    </nav>
+                    </div>
                 </div>
             </div>
+            <template id=fa-eye>{{fa "solid" "eye"}}</template>
+            <template id=fa-eye-slash>{{fa "solid" "eye-slash"}}</template>
+            <template id=fa-copy>{{fa "regular" "copy"}}</template>
+            <template id=fa-play>{{fa "solid" "play"}}</template>
+            <template id=fa-clock-rotate-left>{{fa "solid" "clock-rotate-left"}}</template>
 
-            <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                {{#if previous}}
-                    <a rel="prev" href="{{ path_to_root }}{{previous.link}}" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
-                        {{#if (eq ../text_direction "rtl")}}
-                        {{fa "solid" "angle-right"}}
-                        {{else}}
-                        {{fa "solid" "angle-left"}}
-                        {{/if}}
-                    </a>
-                {{/if}}
-
-                {{#if next}}
-                    <a rel="next prefetch" href="{{ path_to_root }}{{next.link}}" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        {{#if (eq text_direction "rtl")}}
-                        {{fa "solid" "angle-left"}}
-                        {{else}}
-                        {{fa "solid" "angle-right"}}
-                        {{/if}}
-                    </a>
-                {{/if}}
-            </nav>
-
-        </div>
-
-        <template id=fa-eye>{{fa "solid" "eye"}}</template>
-        <template id=fa-eye-slash>{{fa "solid" "eye-slash"}}</template>
-        <template id=fa-copy>{{fa "regular" "copy"}}</template>
-        <template id=fa-play>{{fa "solid" "play"}}</template>
-        <template id=fa-clock-rotate-left>{{fa "solid" "clock-rotate-left"}}</template>
-
-        {{#if live_reload_endpoint}}
-        <!-- Livereload script (if served using the cli tool) -->
-        <script>
+            {{#if live_reload_endpoint}}
+            <!-- Livereload script (if served using the cli tool) -->
+            <script>
             const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsAddress = wsProtocol + "//" + location.host + "/" + "{{{live_reload_endpoint}}}";
             const socket = new WebSocket(wsAddress);
@@ -289,63 +303,63 @@
                 socket.close();
             }
         </script>
-        {{/if}}
+            {{/if}}
 
-        {{#if playground_line_numbers}}
-        <script>
+            {{#if playground_line_numbers}}
+            <script>
             window.playground_line_numbers = true;
         </script>
-        {{/if}}
+            {{/if}}
 
-        {{#if playground_copyable}}
-        <script>
+            {{#if playground_copyable}}
+            <script>
             window.playground_copyable = true;
         </script>
-        {{/if}}
+            {{/if}}
 
-        {{#if playground_js}}
-        <script src="{{ resource "ace.js" }}"></script>
-        <script src="{{ resource "mode-rust.js" }}"></script>
-        <script src="{{ resource "editor.js" }}"></script>
-        <script src="{{ resource "theme-dawn.js" }}"></script>
-        <script src="{{ resource "theme-tomorrow_night.js" }}"></script>
-        {{/if}}
+            {{#if playground_js}}
+            <script src="{{ resource "ace.js" }}"></script>
+            <script src="{{ resource "mode-rust.js" }}"></script>
+            <script src="{{ resource "editor.js" }}"></script>
+            <script src="{{ resource "theme-dawn.js" }}"></script>
+            <script src="{{ resource "theme-tomorrow_night.js" }}"></script>
+            {{/if}}
 
-        {{#if search_js}}
-        <script src="{{ resource "elasticlunr.min.js" }}"></script>
-        <script src="{{ resource "mark.min.js" }}"></script>
-        <script src="{{ resource "searcher.js" }}"></script>
-        {{/if}}
+            {{#if search_js}}
+            <script src="{{ resource "elasticlunr.min.js" }}"></script>
+            <script src="{{ resource "mark.min.js" }}"></script>
+            <script src="{{ resource "searcher.js" }}"></script>
+            {{/if}}
 
-        <script src="{{ resource "clipboard.min.js" }}"></script>
-        <script src="{{ resource "highlight.js" }}"></script>
-        <script src="{{ resource "book.js" }}"></script>
+            <script src="{{ resource "clipboard.min.js" }}"></script>
+            <script src="{{ resource "highlight.js" }}"></script>
+            <script src="{{ resource "book.js" }}"></script>
 
-        <!-- Custom JS scripts -->
-        {{#each additional_js}}
-        <script src="{{ resource this}}"></script>
-        {{/each}}
+            <!-- Custom JS scripts -->
+            {{#each additional_js}}
+            <script src="{{ resource this}}"></script>
+            {{/each}}
 
-        {{#if is_print}}
-        {{#if mathjax_support}}
-        <script>
+            {{#if is_print}}
+            {{#if mathjax_support}}
+            <script>
         window.addEventListener('load', function() {
             MathJax.Hub.Register.StartupHook('End', function() {
                 window.setTimeout(window.print, 100);
             });
         });
         </script>
-        {{else}}
-        <script>
+            {{else}}
+            <script>
         window.addEventListener('load', function() {
             window.setTimeout(window.print, 100);
         });
         </script>
-        {{/if}}
-        {{/if}}
+            {{/if}}
+            {{/if}}
 
-        {{#if fragment_map}}
-        <script>
+            {{#if fragment_map}}
+            <script>
             document.addEventListener('DOMContentLoaded', function() {
                 const fragmentMap =
                     {{{fragment_map}}}
@@ -357,8 +371,8 @@
                 }
             });
         </script>
-        {{/if}}
+            {{/if}}
 
-    </div>
+        </div>
     </body>
 </html>
