@@ -57,7 +57,26 @@
   --blockquote-caution-color: #b52731;
 
   --sidebar-header-border-color: #6e6edb;
+  --background-color: #74ebd5;
+  --gradient:  linear-gradient(90deg, #74ebd5 0%, #9face6 100%);
 }
+
+.layout {
+  background-color:var(--background-color);
+  background-image: var(--gradient);
+}
+.page-wrapper {
+  box-shadow: 13px 0px 9px #00000024;
+}
+.page-wrapper::after {
+  content: '';
+  position:absolute;
+  width:100%;
+  height:100%;
+
+}
+
+box-shadow: 13px 0px 9px #00000024;
 #mdbook-body-container {
   overflow-x: clip;
 }
@@ -90,7 +109,7 @@
 }
 
 #mdbook-sidebar-toggle-anchor:checked ~ .layout #grid-layout {
-  column-gap: var(--layout-column-gap);
+  column-gap: 0;
   grid-template-columns: var(--sidebar-width) minmax(0, var(--content-column-width));
   max-width: calc(
     var(--sidebar-width) + var(--layout-column-gap) +
