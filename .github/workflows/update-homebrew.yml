@@ -14,9 +14,6 @@ on:
 jobs:
   update-homebrew:
     runs-on: ubuntu-latest
-
-      
-      
     steps:
       - name: Compute release tarball info
         id: release
@@ -65,19 +62,43 @@ jobs:
 
       - name: Commit and push formula update
         shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: |
           set -euo pipefail
 
           cd homebrew-cjtaskrunner
 
+          BRANCH="cj-${RELEASE_TAG}"
+          git checkout -B "$BRANCH"
+
           if git diff --quiet; then
             echo "Formula already up to date."
             exit 0
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+            git add Formula/cj.rb
+            git commit -m "cj ${RELEASE_TAG#v}"
           fi
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git push --force-with-lease --set-upstream origin "$BRANCH"
 
-          git add Formula/cj.rb
-          git commit -m "Update cjtaskrunner to ${GITHUB_REF_NAME}"
-          git push
+          PR_URL="$(gh pr list \
+            --repo jgusta/homebrew-cjtaskrunner \
+            --head "$BRANCH" \
+            --state open \
+            --json url \
+            --jq '.[0].url')"
+          if [[ -z "$PR_URL" ]]; then
+            PR_URL="$(gh pr create \
+              --repo jgusta/homebrew-cjtaskrunner \
+              --base main \
+              --head "$BRANCH" \
+              --title "cj ${RELEASE_TAG#v}" \
+              --body "Update cj to ${RELEASE_TAG}. Homebrew bottle artifacts will be built by brew test-bot; publish them with the tap's brew pr-pull workflow after checks pass.")"
+          fi
+
+          echo "Homebrew formula pull request: $PR_URL"
