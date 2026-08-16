@@ -6,7 +6,8 @@
   Independent task wrangler
 </div>
 <div align="center" style="display:flex;align-items:center;justify-content:center;margin-bottom:0;">
-  <img alt="license" src="https://img.shields.io/github/license/jgusta/cjtaskrunner">
+<img alt="GitHub License" src="https://img.shields.io/github/license/jgusta/cjtaskrunner">
+
   <img alt="version" src="https://img.shields.io/github/v/release/jgusta/cjtaskrunner">
 </div>
 
@@ -22,6 +23,8 @@ curl -fsSL https://raw.githubusercontent.com/jgusta/cjtaskrunner/main/install.sh
 
 ## Get started
 
+### Syntax
+
 A `cjtasks` file task consists of a label and the command to run:
 
 ```cjtasks
@@ -31,30 +34,51 @@ dev:
   npm run dev
 ```
 
+Run a task  by invoking its name from the same directory:
+```shell
+> cj dev
+```
+
+### Listing
+
 The CJTaskrunner executable, `cj` lists the available tasks when run by itself:
 
 ```shell
 > cj
-Tasks in your/repo:
+Tasks in cjtasks:
    build
    dev
 ```
 
-Add your tasks or import tasks from `package.json`, `deno.json`, `Makefile`, and `Justfile`:
+Annotate your tasks with the `@desc` directive:
+```cjtasks
+build:
+  @desc build for release using npm
+  npm run build
+dev:
+	@desc build for development and start preview
+  npm run dev
+```
+
+...and they will show when in the task list:
+```shell
+> cj
+Tasks in cjtasks:
+   build                build for release using npm
+   dev                  build for development and start preview
+```
+
+You don't need to even write these tasks out yourself. If you have a `package.json`, `deno.json`, `Makefile`, or `Justfile` you can automatically create your taskfile:
 
 ```shell
 cj --auto
 ```
 
-Open the taskfile in your editor:
-
-```shell
-cj -e
-```
-
 ## Learn more
 
-Read the [manual](https://jgusta.github.io/cjtaskrunner/manual/) for the taskfile
+That's all you need to know to effectively use CJTaskrunner. Every additional feature is optional and exists only where it make things easier and saves time. Go as deep as you want to, the syntax is consistent and terse.
+
+Read the [manual](https://jgusta.github.io/cjtaskrunner/directives.html#shell) for the taskfile
 format, directive reference, and editor setup.
 
 ## Why CJTaskrunner?
@@ -62,7 +86,7 @@ format, directive reference, and editor setup.
 ### CJTaskrunner has its own task format:
 - Uses a small domain-specific language, simpler than YAML
 - Top-level entries are your task name
-- Indented lines are commands that run as they would from the shell
+- Indented lines are commands that run like your shell would (though [CJTaskrunner is not a shell](https://jgusta.github.io/cjtaskrunner/reference/directives.html#shell))
 
 All other lines are fully optional directives. These are flat with only user-supplied names or paths: 
 - Control task flow with `@if`, `@else`, `@switch`,  `@stop`, `@success`, `@fail`, `@and`, `@or`

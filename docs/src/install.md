@@ -18,18 +18,6 @@ The installer downloads the latest release for Linux x86_64, macOS Intel, or
 macOS Apple Silicon, verifies it against `SHA256SUMS`, and installs `cj` into
 `$CJ_INSTALL_DIR` or `$HOME/.local/bin`.
 
-To install a specific version:
-
-```sh
-CJ_VERSION=0.1.0 curl -fsSL https://raw.githubusercontent.com/jgusta/cjtaskrunner/main/install.sh | bash
-```
-
-To install somewhere else:
-
-```sh
-CJ_INSTALL_DIR="$HOME/bin" curl -fsSL https://raw.githubusercontent.com/jgusta/cjtaskrunner/main/install.sh | bash
-```
-
 Make sure the install directory is in your `PATH`.
 
 For Bash or Zsh:
@@ -41,7 +29,7 @@ export PATH="$HOME/.local/bin:$PATH"
 For Fish:
 
 ```fish
-fish_add_path -Ux "$HOME/.local/bin"
+fish_add_path "$HOME/.local/bin"
 ```
 
 ## From Source
@@ -56,8 +44,3 @@ cargo install --git https://github.com/jgusta/cjtaskrunner.git cjtaskrunner
 cj --help
 ```
 
-After installing, create a taskfile with:
-
-```sh
-cj --init
-```
