@@ -174,15 +174,20 @@ class LazyLanguageServer implements vscode.Disposable {
       return Promise.resolve(this.manager);
     }
     if (!this.loading) {
-      this.loading = import("./languageServer.js").then(({ CjLanguageServerManager }) => {
-        const manager = new CjLanguageServerManager();
-        if (this.disposed) {
-          manager.dispose();
-          throw new Error("Extension was disposed while loading language support");
-        }
-        this.manager = manager;
-        return manager;
-      });
+      this.loading = import("./languageServer.js")
+        .then(({ CjLanguageServerManager }) => {
+          const manager = new CjLanguageServerManager();
+          if (this.disposed) {
+            manager.dispose();
+            throw new Error("Extension was disposed while loading language support");
+          }
+          this.manager = manager;
+          return manager;
+        })
+        .catch((error) => {
+          this.loading = undefined;
+          throw error;
+        });
     }
     return this.loading;
   }
@@ -191,13 +196,33 @@ class LazyLanguageServer implements vscode.Disposable {
 class CjTaskProvider implements vscode.TreeDataProvider<TreeEntry> {
   private readonly changed = new vscode.EventEmitter<TreeEntry | undefined | null | void>();
   readonly onDidChangeTreeData = this.changed.event;
-  private files: TaskFileEntry[] = [];
+  private files: TaskFileEntry[] | undefined;
+  private loading: Promise<TaskFileEntry[]> | undefined;
 
-  constructor(private readonly extensionUri: vscode.Uri) {}
+  constructor(private readonly extensionUri: vscode.Uri) { }
 
   refresh(): void {
-    this.files = [];
+    this.files = undefined;
     this.changed.fire();
+  }
+
+  private async getFiles(): Promise<TaskFileEntry[]> {
+    if (this.files) {
+      return this.files;
+    }
+
+    if (!this.loading) {
+      this.loading = discoverTaskfiles()
+        .then((files) => {
+          this.files = files;
+          return files;
+        })
+        .finally(() => {
+          this.loading = undefined;
+        });
+    }
+
+    return this.loading;
   }
 
   getTreeItem(entry: TreeEntry): vscode.TreeItem {
@@ -277,10 +302,9 @@ class CjTaskProvider implements vscode.TreeDataProvider<TreeEntry> {
     if (entry?.kind === "task") {
       return childTaskEntries(entry.file, entry.tasks, entry.task.name);
     }
-    if (this.files.length === 0) {
-      this.files = await discoverTaskfiles();
-    }
-    return this.files.map((file) => ({ kind: "file", file }));
+
+    const files = await this.getFiles();
+    return files.map((file) => ({ kind: "file", file }));
   }
 }
 
