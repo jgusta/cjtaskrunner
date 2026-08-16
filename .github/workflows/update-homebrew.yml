@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to publish (for example, v0.2.1)"
+        description: "Release tag to publish"
         required: true
         type: string
 
@@ -98,7 +98,7 @@ jobs:
               --base main \
               --head "$BRANCH" \
               --title "cj ${RELEASE_TAG#v}" \
-              --body "Update cj to ${RELEASE_TAG}. Homebrew bottle artifacts will be built by brew test-bot; publish them with the tap's brew pr-pull workflow after checks pass.")"
+              --body "Update cj to ${RELEASE_TAG}.")"
           fi
 
           echo "Homebrew formula pull request: $PR_URL"
