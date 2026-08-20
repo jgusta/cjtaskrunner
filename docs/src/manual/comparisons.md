@@ -13,6 +13,7 @@ imperative commands.
 - Doesn't list tasks or document them easily
 - Values idempotency and deterministic results
 - Arbitrary tasks are secondary
+- Has a set of "conventions" and idiomatic ways of authoring files
 
 ## `rake`
 
@@ -37,9 +38,8 @@ imperative commands.
 - Provides built-in features and plugins for web development
 - Uses JavaScript configuration
 - Requires Node.js
+- The holy grail of web build tools
 
 ## Conclusion
 
-CJTaskrunner does not replace these tools. It provides a directory and
-launch point for them, while remaining sufficient for simple workflows on its
-own.
+These tools are all excellent. CJTaskrunner does not replace these tools. It provides a directory and launch point for them, while remaining sufficient for simple workflows on its own. 

@@ -68,15 +68,7 @@
 .page-wrapper {
   box-shadow: 13px 0px 9px #00000024;
 }
-.page-wrapper::after {
-  content: '';
-  position:absolute;
-  width:100%;
-  height:100%;
 
-}
-
-box-shadow: 13px 0px 9px #00000024;
 #mdbook-body-container {
   overflow-x: clip;
 }

@@ -11,34 +11,32 @@
 </div>
 
 CJTaskrunner is a small task runner for project-local commands. Put the
-commands a project needs in a `cjtasks` file, add short descriptions where they
-help, and run them with `cj`.
+commands a project needs in a `cjtasks` file, add short descriptions where they help, and run them with `cj <taskname>`.
+
+The language of the `cjtasks` file is inspired by [`YAML`](https://yaml.org/), but is actually a purpose-made [Domain Specific Language](https://martinfowler.com/dsl.html). It is similar to [`make`](https://www.gnu.org/software/make/) but without all of the declarative and build features.
+
+Because of this it offers an excellent set of ergonomic features such as a dead-simple syntax, flat directives, and bareword strings.
 
 ```cjtasks
 check:
   @desc run the project checks
   cargo test --locked
+
+frontend:
+  @desc run the frontend preview
+  npm run
 ```
 
 ```sh
-cj check
+> cj check
 ```
 
 CJTaskrunner is meant to be a command catalog, not a replacement for Cargo,
-npm, Python, Docker, or shell scripts. It gives those tools short, discoverable
-project names.
+npm, Python, Docker, or shell scripts. It gives those tools short, discoverable project names.
 
 
-{{#toc}}{{/toc}}
 
-## Install
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/jgusta/cjtaskrunner/main/install.sh | bash
-```
-
-See [Install](install.md) for Homebrew, source builds, versions, and install
-directory options.
 
 
 ## Start Here

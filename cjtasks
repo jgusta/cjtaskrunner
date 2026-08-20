@@ -14,9 +14,9 @@ install:
   @desc build and install cli
   cargo install --path .
 
-
 release:
   @desc prepare and publish CLI releases
+  @selfhelp
   prep (VLEV):
     @desc bump, test, commit tag
     scripts/release-cli preflight
@@ -47,6 +47,11 @@ site:
     scripts/docs build
   serve:
     @desc build and open a local documentation server
+    @help:
+      This is completely unnecessary and actually obstructive. It would be better 
+      just to use the mdbooks built-in watching and avoid the reloading of 
+      the browser, but I wanted to test the @watch directive. This is a 
+      reminder to implement a hot-reload web server in a future release.
     @watch docs
       @task site:_serve
   _serve:

@@ -833,14 +833,17 @@ build:
   cargo build
 ```
 
+It's like `@desc` but indented, multiline and only prints when specifically asked for with `cj help`.
+
+The entire block is read as a string. Variables are not allowed on any help-text line. However, for your sanity, the parser will catch whenever something looks like an attempt at using a variable. Use `\$NAME` or `\${NAME}` to display literal variable-shaped text. 
+
+`cj help` prints top-level help text when present, followed by the task listing and available help sections. 
+
+`cj help <task>` prints the task name, its `@desc` and `@help:` text, direct child tasks, and available help sections. 
+
 Top-level `@help:` defines taskfile help. Task-level `@help:` defines help for
 that task. Plain `@help` is invalid; `help:` without the `@` defines an ordinary
-task named `help`. `cj help` prints top-level help text when present, followed
-by the task listing and available help sections. `cj help <task>` prints the
-task name, its `@desc` and `@help:` text, direct child tasks, and available help
-sections. Variables are not allowed on any help-text line. Use `\$NAME` or
-`\${NAME}` to display literal variable-shaped text. Running `cj` lists
-available help sections when any exist.
+task named `help`. 
 
 Tasks whose name or any nested task segment starts with `_` are hidden from the no-argument summary listing. They can still be run directly and viewed with `cj help <task>`.
 
@@ -857,3 +860,5 @@ cli:
 ```
 
 Prints the same output as `cj help <current-task>`, then stops the current task successfully. `@selfhelp` takes no arguments.
+
+The purpose of this directive is to serve as an indicator that there are no commands in this task, useful if it is just a container for subtasks. It is the closest thing to a 
