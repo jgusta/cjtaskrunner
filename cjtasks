@@ -60,8 +60,8 @@ site:
 extension:
   @desc the CJTaskrunner Visual Studio Code extension
   @help:
-    The extension is in "editors/vscode-cjtaskrunner".
-    When built, the package outputs to "dist/cjtaskrunner-vscode.vsix"
+     "editors/vscode-cjtaskrunner".
+     outputs to "dist/cjtaskrunner-vscode.vsix"
   @selfhelp
   package:
     @desc build the vsix package
