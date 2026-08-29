@@ -15,6 +15,9 @@ const panelIcons = [
   "images/cdjtaskicon-light.svg",
   "images/cdjtaskicon-dark.svg"
 ];
+const tasksView = packageJson.contributes?.views?.explorer?.find(
+  (view) => view.id === "cjtaskrunner.tasks"
+);
 const vscodeIgnoreLines = fs
   .readFileSync(path.join(extensionRoot, ".vscodeignore"), "utf8")
   .split(/\r?\n/)
@@ -48,6 +51,12 @@ assert.strictEqual(
   packageJson.icon,
   "icon.png",
   "the Marketplace icon must use the checked-in rendered PNG"
+);
+assert.ok(tasksView, "the CJTASKS Explorer view must be contributed");
+assert.strictEqual(
+  tasksView.icon,
+  "$(checklist)",
+  "the CJTASKS Explorer view must declare its themed view icon"
 );
 
 const icon = fs.readFileSync(iconPath);

@@ -1,6 +1,6 @@
 {
   "name": "cjtaskrunner-vscode",
-  "displayName": "CJTaskrunner Tasks",
+  "displayName": "CJTaskrunner",
   "description": "Taskfile language support and task runner view for CJTaskrunner.",
   "version": "0.0.0",
   "publisher": "cjtaskrunner",
@@ -60,6 +60,7 @@
         {
           "id": "cjtaskrunner.tasks",
           "name": "CJTASKS",
+          "icon": "$(checklist)",
           "when": "cjtaskrunner.hasRootTaskfile"
         }
       ]
