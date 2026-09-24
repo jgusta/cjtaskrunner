@@ -224,3 +224,7 @@
   outline: 2px solid currentColor;
   outline-offset: 2px;
 }
+
+.nav-chapters.previous {
+  left:0;
+}
