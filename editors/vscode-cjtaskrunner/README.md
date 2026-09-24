@@ -7,7 +7,7 @@ Language support and task execution tools for [CJTaskrunner](https://github.com/
 - Syntax highlighting for CJTaskrunner `cjtasks` task files.
 - Diagnostics, document symbols, directive hovers, task/variable completions, and formatting.
 - Go-to-definition for `@task` references.
-- `CJTasks` panel for task discovery and execution.
+- `CJTASKS` panel for task discovery and execution.
 - Lightweight and optimized < 5ms startup time
 
 The task panel is hidden unless a workspace root contains `cjtasks` or

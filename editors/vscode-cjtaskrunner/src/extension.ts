@@ -249,9 +249,9 @@ class CjTaskProvider implements vscode.TreeDataProvider<TreeEntry> {
     }
 
     const item = new vscode.TreeItem(
-      entry.task.name,
+      taskTreeLabel(entry.task),
       hasChildTasks(entry.tasks, entry.task.name)
-        ? vscode.TreeItemCollapsibleState.Collapsed
+        ? vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.None
     );
     const runnable = isRunnableTask(entry.task);
@@ -275,8 +275,8 @@ class CjTaskProvider implements vscode.TreeDataProvider<TreeEntry> {
 
   private taskfileIcon(): { light: vscode.Uri; dark: vscode.Uri } {
     return {
-      light: vscode.Uri.joinPath(this.extensionUri, "images", "cjdocicon-light.svg"),
-      dark: vscode.Uri.joinPath(this.extensionUri, "images", "cjdocicon-dark.svg")
+      light: vscode.Uri.joinPath(this.extensionUri, "images", "cjdocicon-light.png"),
+      dark: vscode.Uri.joinPath(this.extensionUri, "images", "cjdocicon-dark.png")
     };
   }
 
@@ -424,6 +424,11 @@ async function runTreeEntry(context: vscode.ExtensionContext, entry?: TreeEntry)
     return;
   }
 
+  const arguments_ = await collectTaskArguments(entry.task);
+  if (!arguments_) {
+    return;
+  }
+
   const runnerPath = resolveConfiguredExecutablePath(entry.file.uri).command;
   if (!taskTerminal) {
     taskTerminal = vscode.window.createTerminal({
@@ -433,7 +438,28 @@ async function runTreeEntry(context: vscode.ExtensionContext, entry?: TreeEntry)
     context.subscriptions.push(taskTerminal);
   }
   taskTerminal.show();
-  taskTerminal.sendText(`${shellQuote(runnerPath)} ${shellQuote(entry.file.uri.fsPath)} ${shellQuote(entry.task.name)}`);
+  taskTerminal.sendText(
+    [runnerPath, entry.file.uri.fsPath, entry.task.name, ...arguments_]
+      .map(shellQuote)
+      .join(" ")
+  );
+}
+
+async function collectTaskArguments(task: TaskDefinition): Promise<string[] | undefined> {
+  const values: string[] = [];
+  for (const argument of task.arguments) {
+    const value = await vscode.window.showInputBox({
+      prompt: `Value for ${argument}`,
+      placeHolder: argument,
+      ignoreFocusOut: true,
+      validateInput: (input) => input.trim().length > 0 ? undefined : `${argument} is required`
+    });
+    if (value === undefined) {
+      return undefined;
+    }
+    values.push(value);
+  }
+  return values;
 }
 
 async function openTreeEntry(entry: TreeEntry): Promise<void> {
@@ -464,8 +490,12 @@ async function pickTask(): Promise<TreeEntry | undefined> {
   return picked?.entry;
 }
 
-function taskEntries(file: TaskFileEntry, tasks: TaskDefinition[]): TreeEntry[] {
-  return tasks.map((task) => ({ kind: "task", file, tasks, task }));
+function taskEntries(
+  file: TaskFileEntry,
+  tasks: TaskDefinition[],
+  allTasks: TaskDefinition[] = tasks
+): TreeEntry[] {
+  return sortTasks(tasks).map((task) => ({ kind: "task", file, tasks: allTasks, task }));
 }
 
 function taskIconPath(
@@ -478,9 +508,23 @@ function taskIconPath(
   if (task.selfHelp) {
     return new vscode.ThemeIcon("book", new vscode.ThemeColor("descriptionForeground"));
   }
+  if (task.arguments.length > 0) {
+    return new vscode.ThemeIcon("symbol-parameter", new vscode.ThemeColor("charts.yellow"));
+  }
   return {
-    light: vscode.Uri.joinPath(extensionUri, "images", "cdjtaskicon-light.svg"),
-    dark: vscode.Uri.joinPath(extensionUri, "images", "cdjtaskicon-dark.svg")
+    light: vscode.Uri.joinPath(extensionUri, "images", "cdjtaskicon-light.png"),
+    dark: vscode.Uri.joinPath(extensionUri, "images", "cdjtaskicon-dark.png")
+  };
+}
+
+function taskTreeLabel(task: TaskDefinition): string | vscode.TreeItemLabel {
+  if (task.arguments.length === 0) {
+    return task.name;
+  }
+  const suffix = ` (${task.arguments.join(", ")})`;
+  return {
+    label: `${task.name}${suffix}`,
+    highlights: [[task.name.length + 2, task.name.length + suffix.length]]
   };
 }
 
@@ -495,7 +539,8 @@ function rootTaskEntries(file: TaskFileEntry, tasks: TaskDefinition[]): TreeEntr
     tasks.filter((task) => {
       const parent = parentTaskName(task.name);
       return parent === undefined || !taskNames.has(parent);
-    })
+    }),
+    tasks
   );
 }
 
@@ -506,7 +551,8 @@ function childTaskEntries(
 ): TreeEntry[] {
   return taskEntries(
     file,
-    tasks.filter((task) => parentTaskName(task.name) === parentName)
+    tasks.filter((task) => parentTaskName(task.name) === parentName),
+    tasks
   );
 }
 
@@ -517,6 +563,15 @@ function hasChildTasks(tasks: TaskDefinition[], parentName: string): boolean {
 function parentTaskName(name: string): string | undefined {
   const separator = name.lastIndexOf(":");
   return separator === -1 ? undefined : name.slice(0, separator);
+}
+
+function sortTasks(tasks: TaskDefinition[]): TaskDefinition[] {
+  return [...tasks].sort((left, right) =>
+    left.name.localeCompare(right.name, undefined, {
+      numeric: true,
+      sensitivity: "base"
+    })
+  );
 }
 
 function layerTasks(file: TaskFileEntry, layer: TaskLayerEntry): TaskDefinition[] {

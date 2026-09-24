@@ -145,6 +145,20 @@ pub(crate) fn resolve_invocation_from(args: &[String], cwd: &Path) -> CjResult<I
     } else {
         cwd.join(raw_target)
     };
+    if args.len() == 1 && target.is_dir() {
+        return Ok(Invocation::List {
+            task_file: discover_task_file(&target)?,
+        });
+    }
+    if args.len() == 1 && target.is_file() {
+        if !is_recognized_taskfile(&target) {
+            return Err(CjError::new(format!(
+                "unrecognized taskfile name: {}",
+                target.display()
+            )));
+        }
+        return Ok(Invocation::List { task_file: target });
+    }
     if args.len() >= 2 && target.is_file() && !is_recognized_taskfile(&target) {
         return Err(CjError::new(format!(
             "unrecognized taskfile name: {}",

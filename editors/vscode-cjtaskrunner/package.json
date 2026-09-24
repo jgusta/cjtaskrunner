@@ -2,7 +2,7 @@
   "name": "cjtaskrunner-vscode",
   "displayName": "CJTaskrunner",
   "description": "Taskfile language support and task runner view for CJTaskrunner.",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "publisher": "cjtaskrunner",
   "private": false,
   "license": "MIT",
@@ -35,8 +35,11 @@
       {
         "id": "cjtasks",
         "aliases": [
+          "cj",
           "cjtasks",
-          "CJTaskrunner"
+          "CJTaskrunner",
+          "cjtaskrunner",
+          "cjtask"
         ],
         "filenames": [
           "cjtasks",
@@ -60,7 +63,7 @@
         {
           "id": "cjtaskrunner.tasks",
           "name": "CJTASKS",
-          "icon": "$(checklist)",
+          "icon": "images/cj-logo-color-f.png",
           "when": "cjtaskrunner.hasRootTaskfile"
         }
       ]
@@ -116,7 +119,7 @@
           "type": "string",
           "scope": "resource",
           "default": "",
-          "description": "Path to the cj executable. Empty uses cj from PATH. Relative paths resolve from the first workspace folder."
+          "description": "Path to the cj executable. Leave empty to use PATH. Relative paths resolve from the first workspace folder."
         },
         "cjtaskrunner.lsp.trace.server": {
           "type": "string",
@@ -131,7 +134,7 @@
         "cjtaskrunner.showTaskfileCascade": {
           "type": "boolean",
           "scope": "resource",
-          "default": false,
+          "default": true,
           "description": "Show the taskfile cascade in the CJTASKS panel."
         },
         "cjtaskrunner.showOverriddenTasksInCascade": {

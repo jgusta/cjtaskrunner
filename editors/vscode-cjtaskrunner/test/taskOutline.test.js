@@ -15,6 +15,8 @@ assert.deepStrictEqual(
 );
 assert.strictEqual(outline.tasks[0].description, "build tasks");
 assert.strictEqual(outline.tasks[1].description, "build dev assets");
+assert.deepStrictEqual(outline.tasks[0].arguments, ["TARGET"]);
+assert.deepStrictEqual(outline.tasks[1].arguments, ["MODE"]);
 assert.strictEqual(outline.tasks[0].line, 6);
 assert.strictEqual(outline.tasks[1].line, 8);
 assert.deepStrictEqual(
@@ -70,6 +72,7 @@ assert.deepStrictEqual(
 );
 assert.strictEqual(tabOutline.tasks[0].description, "build tasks");
 assert.strictEqual(tabOutline.tasks[1].description, "build cli");
+assert.deepStrictEqual(tabOutline.tasks[1].arguments, ["PROFILE"]);
 assert.deepStrictEqual(
   tabOutline.symbols[0].children.map((symbol) => symbol.name),
   ["build:cli"],

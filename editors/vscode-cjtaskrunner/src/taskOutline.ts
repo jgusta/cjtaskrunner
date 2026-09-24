@@ -1,6 +1,7 @@
 export type TaskEntry = {
   name: string;
   line: number;
+  arguments: string[];
   description?: string;
   selfHelp?: boolean;
 };
@@ -52,10 +53,10 @@ export function parseTaskOutline(source: string): TaskOutline {
 
     if (indent.width === 0) {
       closeAllContexts(contexts, lineNumber);
-      const name = taskLabel(line);
-      if (name) {
-        const context = createTaskContext(name, lineNumber, 0, name.length, 0);
-        if (isPanelVisibleTask(name)) {
+      const label = taskLabel(line);
+      if (label) {
+        const context = createTaskContext(label, lineNumber, 0, label.name.length, 0);
+        if (isPanelVisibleTask(label.name)) {
           tasks.push(context.task);
         }
         symbols.push(context.symbol);
@@ -75,14 +76,14 @@ export function parseTaskOutline(source: string): TaskOutline {
       continue;
     }
 
-    const childName = taskLabel(text);
-    if (childName) {
-      const name = `${parent.name}:${childName}`;
+    const childLabel = taskLabel(text);
+    if (childLabel) {
+      const name = `${parent.name}:${childLabel.name}`;
       const context = createTaskContext(
-        name,
+        { ...childLabel, name },
         lineNumber,
         indent.characters,
-        indent.characters + childName.length,
+        indent.characters + childLabel.name.length,
         indent.width
       );
       if (isPanelVisibleTask(name)) {
@@ -107,15 +108,19 @@ export function parseTaskOutline(source: string): TaskOutline {
 }
 
 function createTaskContext(
-  name: string,
+  label: TaskLabel,
   lineNumber: number,
   selectionStartCharacter: number,
   selectionEndCharacter: number,
   headerIndent: number
 ): TaskContext {
-  const task: TaskEntry = { name, line: lineNumber };
+  const task: TaskEntry = {
+    name: label.name,
+    line: lineNumber,
+    arguments: label.arguments
+  };
   const symbol: TaskSymbolEntry = {
-    name,
+    name: label.name,
     startLine: lineNumber,
     startCharacter: selectionStartCharacter,
     endLine: lineNumber,
@@ -125,7 +130,7 @@ function createTaskContext(
     children: []
   };
 
-  return { name, headerIndent, task, symbol };
+  return { name: label.name, headerIndent, task, symbol };
 }
 
 function closeFinishedContexts(
@@ -172,14 +177,31 @@ function isSelfHelpDirective(text: string): boolean {
   return /^@selfhelp(?:\s|;|$)/.test(text);
 }
 
-function taskLabel(text: string): string | undefined {
+type TaskLabel = {
+  name: string;
+  arguments: string[];
+};
+
+function taskLabel(text: string): TaskLabel | undefined {
   if (text.startsWith("@")) {
     return undefined;
   }
   const match = text.match(
-    /^([A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)*)(?:[ \t]+\([A-Za-z_][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z_][A-Za-z0-9_]*)*\))?:$/
+    /^([A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)*)(?:[ \t]+(\([A-Za-z_][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z_][A-Za-z0-9_]*)*\)))?:$/
   );
-  return match?.[1];
+  if (!match) {
+    return undefined;
+  }
+  const argumentText = match[2];
+  return {
+    name: match[1],
+    arguments: argumentText
+      ? argumentText
+        .slice(1, -1)
+        .split(",")
+        .map((argument) => argument.trim())
+      : []
+  };
 }
 
 function isPanelVisibleTask(name: string): boolean {

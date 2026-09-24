@@ -10,10 +10,10 @@ const iconPath = path.join(extensionRoot, packageJson.icon ?? "");
 const root = path.join(extensionRoot, "..", "..");
 const canonicalLogoPath = path.join(root, "logo", "cj-logo-color-d.svg");
 const panelIcons = [
-  "images/cjdocicon-light.svg",
-  "images/cjdocicon-dark.svg",
-  "images/cdjtaskicon-light.svg",
-  "images/cdjtaskicon-dark.svg"
+  "images/cjdocicon-light.png",
+  "images/cjdocicon-dark.png",
+  "images/cdjtaskicon-light.png",
+  "images/cdjtaskicon-dark.png"
 ];
 const tasksView = packageJson.contributes?.views?.explorer?.find(
   (view) => view.id === "cjtaskrunner.tasks"
@@ -55,8 +55,8 @@ assert.strictEqual(
 assert.ok(tasksView, "the CJTASKS Explorer view must be contributed");
 assert.strictEqual(
   tasksView.icon,
-  "$(checklist)",
-  "the CJTASKS Explorer view must declare its themed view icon"
+  "images/cj-logo-color-f.png",
+  "the CJTASKS Explorer view must declare its checked-in icon"
 );
 
 const icon = fs.readFileSync(iconPath);

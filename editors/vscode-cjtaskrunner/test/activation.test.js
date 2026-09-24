@@ -34,7 +34,7 @@ assert.strictEqual(
 assert.strictEqual(taskView.name, "CJTASKS");
 
 const configuration = packageJson.contributes.configuration.properties;
-assert.strictEqual(configuration["cjtaskrunner.showTaskfileCascade"].default, false);
+assert.strictEqual(configuration["cjtaskrunner.showTaskfileCascade"].default, true);
 assert.strictEqual(
   configuration["cjtaskrunner.showTaskfileCascade"].description,
   "Show the taskfile cascade in the CJTASKS panel."
@@ -87,6 +87,10 @@ assert.ok(
 assert.ok(
   extensionSource.includes('command: "cjtaskrunner.openTask"'),
   "active task rows must open their definitions"
+);
+assert.ok(
+  extensionSource.includes("return sortTasks(tasks).map"),
+  "task entries must be sorted at each tree level"
 );
 assert.ok(
   extensionSource.includes("let taskTerminal: vscode.Terminal | undefined"),

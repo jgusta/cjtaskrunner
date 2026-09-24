@@ -68,6 +68,36 @@ fn resolves_two_arg_directory_and_direct_file() {
 }
 
 #[test]
+fn resolves_single_directory_or_taskfile_as_a_listing() {
+    let dir = test_path("single-location-listing");
+    fs::create_dir_all(&dir).expect("mkdir");
+    fs::write(dir.join("cjtasks"), "run:\n  true\n").expect("write cjtasks");
+
+    let from_dir = resolve_invocation_from(&[dir.to_string_lossy().to_string()], &dir)
+        .expect("resolve directory listing");
+    assert_eq!(
+        from_dir,
+        Invocation::List {
+            task_file: dir.join("cjtasks")
+        }
+    );
+
+    let from_file = resolve_invocation_from(
+        &[dir.join("cjtasks").to_string_lossy().to_string()],
+        &dir,
+    )
+    .expect("resolve taskfile listing");
+    assert_eq!(
+        from_file,
+        Invocation::List {
+            task_file: dir.join("cjtasks")
+        }
+    );
+
+    fs::remove_dir_all(dir).expect("cleanup");
+}
+
+#[test]
 fn resolves_task_arguments_with_and_without_explicit_location() {
     let dir = test_path("task-arguments-invocation");
     fs::create_dir_all(&dir).expect("mkdir");

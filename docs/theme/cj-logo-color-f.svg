@@ -37,10 +37,6 @@
       <title>RectStroke</title>
       <stop style="stop-color: rgb(0, 0, 0);"/>
     </linearGradient>
-    <linearGradient id="color-6" gradientUnits="userSpaceOnUse" bx:pinned="true" gradientTransform="matrix(1, 0, 0, 1, -268.971006, -83.902198)">
-      <title>CFill</title>
-      <stop style="stop-color: oklab(0.814 -0.1 -0.265);"/>
-    </linearGradient>
     <linearGradient id="color-7" gradientUnits="userSpaceOnUse" bx:pinned="true" gradientTransform="matrix(1, 0, 0, 1, -268.971006, -83.902198)">
       <title>CStroke</title>
       <stop style="stop-color: rgb(0, 0, 0);"/>
@@ -48,68 +44,52 @@
     <bx:export>
       <bx:file format="png" path="cj-logo-color-f.png"/>
     </bx:export>
-    <linearGradient id="color-11" bx:pinned="true" gradientUnits="userSpaceOnUse">
-      <stop style="stop-color: lab(99.5 -92.1 -58.5);"/>
-    </linearGradient>
-    <linearGradient id="color-12" bx:pinned="true" gradientUnits="userSpaceOnUse">
-      <stop style="stop-color: lab(74.2 78.8 8.76);"/>
-    </linearGradient>
     <linearGradient id="gradient-1" bx:pinned="true">
       <title>gradient</title>
       <stop offset="0" style="stop-color: lab(97.3 6.38 -70.7);"/>
-      <stop offset="0" style="stop-color: lab(35.3 -39.1 -74);"/>
-      <stop offset="0.425" style="stop-color: rgb(255, 255, 255);"/>
-      <stop offset="0.613" style="stop-color: rgb(255, 255, 255);"/>
+      <stop offset="0.062" style="stop-color: lab(35.3 -39.1 -74);"/>
+      <stop offset="0.175" style="stop-color: lab(35.3 -39.1 -74);"/>
+      <stop offset="0.289" style="stop-color: rgb(255, 255, 255);">
+        <title>shine</title>
+      </stop>
+      <stop offset="0.389" style="stop-color: rgb(0, 198, 237);">
+        <title>shine2</title>
+      </stop>
+      <stop offset="0.503" style="stop-color: rgb(255, 255, 255);"/>
+      <stop offset="0.579" style="stop-color: rgb(255, 255, 255);"/>
       <stop offset="0.721" style="stop-color: lab(90.4 -46.7 -57.3);"/>
       <stop offset="0.787" style="stop-color: rgb(0, 90, 155);"/>
-      <stop offset="0.832" style="stop-color: rgb(0, 119, 147);"/>
-      <stop offset="0.89" style="stop-color: lab(53.9 -1.78 -69.2);"/>
-      <stop offset="1" style="stop-color: rgb(27, 32, 76);"/>
+      <stop offset="0.874" style="stop-color: rgb(0, 119, 147);"/>
+      <stop offset="0.944" style="stop-color: lab(53.9 -1.78 -69.2);"/>
+      <stop offset="1" style="stop-color: lab(75.9 11.7 -100);"/>
     </linearGradient>
     <linearGradient id="gradient-0" bx:pinned="true">
       <title>red</title>
       <stop offset="0" style="stop-color: rgb(255, 0, 0);"/>
-      <stop offset="0.078" style="stop-color: rgb(207, 0, 1);"/>
-      <stop offset="0.145" style="stop-color: rgb(255, 0, 0);"/>
-      <stop offset="0.197" style="stop-color: rgb(255, 184, 169);"/>
-      <stop offset="0.215" style="stop-color: rgb(255, 204, 204);"/>
-      <stop offset="0.244" style="stop-color: rgb(255, 36, 36);"/>
-      <stop offset="0.275" style="stop-color: rgb(229, 27, 27);"/>
-      <stop offset="0.361" style="stop-color: rgb(255, 132, 101);"/>
-      <stop offset="0.387" style="stop-color: rgb(201, 17, 17);"/>
-      <stop offset="0.491" style="stop-color: rgb(179, 0, 0);"/>
-      <stop offset="0.533" style="stop-color: rgb(255, 127, 127);"/>
-      <stop offset="0.566" style="stop-color: rgb(166, 0, 0);"/>
-      <stop offset="0.626" style="stop-color: rgb(247, 35, 5);"/>
-      <stop offset="0.683" style="stop-color: lch(91.9 150 42.5);"/>
-      <stop offset="0.761" style="stop-color: rgb(199, 45, 0);"/>
-      <stop offset="0.824" style="stop-color: rgb(255, 145, 145);"/>
-      <stop offset="0.883" style="stop-color: rgb(178, 33, 6);"/>
-      <stop offset="0.944" style="stop-color: rgb(243, 0, 0);"/>
-      <stop offset="1" style="stop-color: rgb(76, 27, 27);"/>
+      <stop offset="0.099" style="stop-color: rgb(207, 0, 1);"/>
+      <stop offset="0.269" style="stop-color: rgb(255, 36, 36);"/>
+      <stop offset="0.361" style="stop-color: oklab(0.83 0.189 0.129);"/>
+      <stop offset="0.5" style="stop-color: rgb(201, 17, 17);"/>
+      <stop offset="0.582" style="stop-color: lab(48.1 92.1 56.7);"/>
+      <stop offset="0.799" style="stop-color: oklab(0.959 0.229 0.194);"/>
+      <stop offset="0.883" style="stop-color: rgb(243, 0, 0);"/>
+      <stop offset="0.991" style="stop-color: rgb(208, 74, 74);"/>
     </linearGradient>
     <linearGradient id="gradient-4" bx:pinned="true">
-      <stop offset="0" style="stop-color: lab(97.3 6.38 -70.7);"/>
+      <stop offset="0" style="stop-color: lab(93.8 6.38 -70.7);"/>
       <stop offset="0" style="stop-color: lab(35.3 -39.1 -74);"/>
       <stop offset="0.447" style="stop-color: rgb(255, 255, 255);"/>
       <stop offset="0.518" style="stop-color: rgb(255, 255, 255);"/>
-      <stop offset="0.62" style="stop-color: lab(90.4 -46.7 -57.3);"/>
-      <stop offset="0.691" style="stop-color: rgb(0, 90, 155);"/>
-      <stop offset="0.741" style="stop-color: rgb(0, 119, 147);"/>
-      <stop offset="0.798" style="stop-color: lab(53.9 -1.78 -69.2);"/>
-      <stop offset="0.99" style="stop-color: rgb(27, 32, 76);"/>
+      <stop offset="0.621" style="stop-color: lab(90.4 -46.7 -57.3);"/>
+      <stop offset="0.784" style="stop-color: rgb(0, 119, 147);"/>
+      <stop offset="0.892" style="stop-color: lab(53.9 -1.78 -69.2);"/>
+      <stop offset="1" style="stop-color: rgb(27, 32, 76);"/>
     </linearGradient>
-    <linearGradient id="gradient-4-0" href="#gradient-4" gradientUnits="userSpaceOnUse" x1="657.827" y1="505.977" x2="657.827" y2="1388.244">
-      <animate attributeName="y1" values="493;504;488;497;493" begin="0.02s" dur="7.97s" fill="freeze" keyTimes="0; 0.229738; 0.470242; 0.705835; 1" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1; 0.42 0 0.58 1; 0.42 0 0.58 1; 0.42 0 0.58 1"/>
-      <animate attributeName="y2" values="1551;1509;1535.84;1562;1551" begin="0.02s" dur="7.91s" fill="freeze" keyTimes="0; 0.227605; 0.471564; 0.709399; 1" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1; 0.42 0 0.58 1; 0.42 0 0.58 1; 0.42 0 0.58 1"/>
-    </linearGradient>
-    <linearGradient id="gradient-4-1" href="#gradient-4" gradientUnits="userSpaceOnUse" x1="767.194" y1="430.579" x2="767.194" y2="1412.576">
-      <animate attributeName="y1" values="662;669;662" begin="0s" dur="7.7s" fill="freeze" keyTimes="0; 0.478698; 1" calcMode="spline" keySplines="0.42 0 0.58 1; 0.42 0 0.58 1" repeatCount="indefinite"/>
-      <animate attributeName="y2" values="1720;1657;1720" begin="0s" dur="7.69s" fill="freeze" keyTimes="0; 0.47844; 1" calcMode="spline" keySplines="0.42 0 0.58 1; 0.42 0 0.58 1" repeatCount="indefinite"/>
-    </linearGradient>
+    <linearGradient id="gradient-4-0" href="#gradient-4" gradientUnits="userSpaceOnUse" x1="657.827" y1="505.977" x2="657.827" y2="1388.244"/>
+    <linearGradient id="gradient-4-1" href="#gradient-4" gradientUnits="userSpaceOnUse" x1="767.194" y1="430.579" x2="767.194" y2="1412.576"/>
     <linearGradient id="gradient-1-0" href="#gradient-1" gradientUnits="userSpaceOnUse" x1="785.339" y1="262.43" x2="785.339" y2="1849.83">
-      <animate attributeName="y1" values="-786;191;-786" begin="0s" dur="7.89s" keyTimes="0; 0.49124; 1" calcMode="spline" keySplines="0.42 0 0.58 1; 0.42 0 0.58 1" repeatCount="indefinite"/>
-      <animate attributeName="y2" values="1935;2014;1935" begin="0s" dur="7.89s" fill="freeze" keyTimes="0; 0.493; 1" calcMode="spline" keySplines="0.42 0 0.58 1; 0.42 0 0.58 1" repeatCount="indefinite"/>
+      <animate attributeName="y1" values="-27;-1395;-27" begin="0s" dur="7.89s" keyTimes="0; 0.49124; 1" calcMode="spline" keySplines="0.42 0 0.58 1; 0.42 0 0.58 1" repeatCount="indefinite"/>
+      <animate attributeName="y2" values="2003;1480;2003" begin="0s" dur="7.89s" fill="freeze" keyTimes="0; 0.493; 1" calcMode="spline" keySplines="0.42 0 0.58 1; 0.42 0 0.58 1" repeatCount="indefinite"/>
     </linearGradient>
     <linearGradient id="gradient-0-0" href="#gradient-0" gradientUnits="userSpaceOnUse" x1="1253.572" y1="878.369" x2="1253.572" y2="1594.682"/>
   </defs>
