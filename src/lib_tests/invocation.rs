@@ -82,11 +82,9 @@ fn resolves_single_directory_or_taskfile_as_a_listing() {
         }
     );
 
-    let from_file = resolve_invocation_from(
-        &[dir.join("cjtasks").to_string_lossy().to_string()],
-        &dir,
-    )
-    .expect("resolve taskfile listing");
+    let from_file =
+        resolve_invocation_from(&[dir.join("cjtasks").to_string_lossy().to_string()], &dir)
+            .expect("resolve taskfile listing");
     assert_eq!(
         from_file,
         Invocation::List {
