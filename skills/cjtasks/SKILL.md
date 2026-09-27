@@ -1,223 +1,107 @@
 ---
 name: cjtasks
-description: Work with CJTaskrunner, a one-file executable named cj that uses a cjtasks file as a simple, self-discovering task catalog alongside other task runners, with a terse purpose-built language whose core syntax can be learned in seconds and optional directives that save time.
+description: Create, edit, run, and troubleshoot CJTaskrunner taskfiles and CLI workflows.
 ---
 
-# Work With CJTaskrunner
+# CJTaskrunner
 
-Prefer the repository's existing task names and organization. Do not invent
-syntax; use `cj --help` for CLI help and `cj --directives` when a directive
-detail is not covered here.
-CJTaskrunner is indentation-sensitive but is not YAML.
+- Preserve existing task names/organization.
+- Never invent syntax. Use `cj --help`; use `cj --directives` for omitted directive details.
+- Sources: [manual](https://jgusta.github.io/cjtaskrunner/), [directives](https://jgusta.github.io/cjtaskrunner/reference/directives.html), [repo](https://github.com/jgusta/cjtaskrunner).
+- Errors usually state the fix; follow that guidance first.
+- Syntax is indentation-sensitive, not YAML.
 
-## Create And Discover Taskfiles
+## Taskfiles
 
-Use `cjtasks` as the base. Optional overlays cascade in this order:
-`production.cjtasks`, `staging.cjtasks`, `development.cjtasks`, then
-`local.cjtasks`. Higher layers replace whole tasks and env entries; task
-overrides must preserve arity. Only the base may declare `@version` or contain
-version bump directives. Discovery checks only the selected directory and does not search
-parents or descendants.
+- Base: `cjtasks`.
+- Overlay precedence (low to high): `production.cjtasks`, `staging.cjtasks`, `development.cjtasks`, `local.cjtasks`.
+- Overlays replace whole tasks/env entries; task overrides must preserve arity.
+- Only base may declare `@version` or version bumps.
+- Discovery checks only the selected directory; never parents/descendants.
+- `cj --init`: create empty taskfile; never overwrite one.
+- `cj --auto`: add root `package.json`, `deno.json`, `Makefile`, and argument-free `Justfile` tasks; never overwrite CJ tasks. Package scripts take priority; rename collisions `build`, `build2`, `build3` (no separator).
 
-Create an empty taskfile with `cj --init`. Import root-level `package.json`,
-`deno.json`, `Makefile`, and argument-free `Justfile` tasks with `cj --auto`.
-Imports never overwrite CJ tasks. Package scripts are considered first;
-collisions use `build`, `build2`, `build3`, without an inserted separator.
+## Shape
 
-## Follow The File Shape
+- Generate/edit with 2-space indents. Consistent tabs parse; `cj --format` converts leading indentation to spaces.
+- Full-line `#` is a comment; inline `#` is command input.
+- Put `@version`, `@help:`, `@env:` before tasks.
+- Spell `@env:`/`@help:` exactly; `env:`/`help:` define tasks.
+- Variables are forbidden in `@desc`/`@help:`; all indented `@help:` content is literal text.
 
-Use two spaces per indentation level in generated or edited taskfiles.
-CJTaskrunner accepts a file that consistently uses tabs, but `cj --format`
-always normalizes leading indentation to spaces. Full-line `#` comments are
-comments; inline `#` text is command input. Keep `@version`, `@help:`, and
-`@env:` headers before task definitions.
+## Tasks
 
-```cjtasks
-@version app 1.2.0
+- Name parts: ASCII letters, digits, `-`, `_`.
+- One-level nested headings produce `parent:child`; invoke `cj web:build`.
+- Declare required positional args as `deploy (TARGET, TAG):`; invoke `cj deploy production v1.2.3`.
+- No optional/default/variadic argument syntax. Argument variables are call-local.
+- Leading `_` hides a task from summaries; descendants of hidden parents are hidden.
+- Task names cannot match directories beside the taskfile.
 
-@env:
-  MODE?: development
-  API_URL: https://example.com
+## Commands
 
-@help:
-  Project development tasks
+- Ordinary lines execute argv directly: no pipes, redirection, globs, command substitution, chaining, or shell builtins.
+- Use `@shell` only for shell syntax.
+- `@open` accepts exactly one `http://` or `https://` URL.
 
-build:
-  @desc build the project
-  cargo build
-```
+## Variables/environment
 
-Use `@env:` and `@help:` exactly. Plain `env:` and `help:` are ordinary task
-names. Variables are forbidden in `@desc` prose and `@help:` blocks.
+- `$NAME`, `${NAME}`: empty if absent.
+- `${NAME?}`: error if absent.
+- `${NAME?fallback}`, `${NAME?"fallback text"}`: fallback if absent.
+- `\$NAME`: literal marker.
+- Interpolated ordinary-command value stays one argv; `@shell` shell-quotes interpolations.
+- Top-level `@env:`: `NAME: value` overrides inherited value; `NAME?: value` sets only if absent.
+- `@set NAME value`: runtime variable.
+- `@set NAME:` + indented block: capture stdout.
+- `@export NAME`: expose runtime variable to children.
+- `@unset NAME`: remove runtime value/export.
+- Runtime variables remain internal until exported.
 
-## Define And Invoke Tasks
+## Flow/composition
 
-Use ASCII letters, digits, hyphens, and underscores in task-name parts. Nest
-task headings one level to create colon-addressed names.
+- `@task name args...`: sequential call sharing runtime/cwd; restores callee argument/directory scopes afterward. Recursion errors.
+- `@and` runs after success; `@or` after failure.
+- Status: `@success`, `@fail`, `@return`, `@stop`.
+- Branching: `@if`, `@if-not`, `@if-in`, `@if-not-in`, `@else`, `@if-exists`, `@if-not-exists`, `@if-set`, `@if-not-set`, `@switch`, `@case`, `@default`.
+- Membership: `@if-in $VALUE one two three`.
+- `@await task...`: parallel argument-free tasks. Its optional block runs after all succeed; same-level `@or` handles failure.
+- Awaited tasks clone runtime/cwd, may mutate files, but cannot use `@set`, `@export`, `@unset`, or version bumps, including via static `@task` calls.
+- Await cycles/missing targets are parse errors. Positive-integer `CJ_JOBS` limits parallelism.
 
-```cjtasks
-web:
-  @desc web tasks
-  build:
-    npm run build
+## Versions
 
-deploy (TARGET, TAG):
-  deploy-tool $TARGET $TAG
-```
+- Top-level SemVer excludes build metadata; `@version app 1.2.0` creates `$VERSION_APP`.
+- Bumps: `@major`, `@minor`, `@patch`, `@pre`, `@release`; each named version may bump once/invocation.
+- Conditions: `@if-version`, `@if-not-version`, `@if-bumped`, `@if-not-bumped`, and kind pairs such as `@if-patch`/`@if-not-patch`.
+- Argumentless `@if-bumped` matches any bump; argumentless `@if-not-bumped` matches no bumps.
 
-Run these as `cj web:build` and `cj deploy production v1.2.3`. Declared task
-arguments are required positional values. Do not invent optional, default, or
-variadic argument syntax. Task argument variables are local to that call.
+## Paths/docs
 
-Tasks whose name begins with `_` are hidden from summary mode. If any parent
-name begins with `_`, its descendants are hidden too. A task name cannot match
-a directory beside the taskfile.
+- `@cd`/`@back`: scoped cwd changes.
+- `@mkdir`, `@clean`, `@cp`, `@cpdir`, `@rename`: filesystem operations; relative paths use task cwd.
+- `@desc`: one-line summary. `@help:`: indented details. For help/subtask-only tasks, `@selfhelp` prints current help, then succeeds/stops.
 
-## Choose Direct Commands Or Shell Commands
+## CLI
 
-Use ordinary lines for direct argv execution. They do not process pipes,
-redirects, globbing, command substitution, chaining, or shell builtins.
+- `cj`: list visible tasks.
+- `cj <task> [args...]`: run.
+- `cj <directory-or-taskfile> <task> [args...]`: select taskfile and run.
+- `cj help [task]`: taskfile/task help.
+- `cj --init`: initialize.
+- `cj --auto`: additive import.
+- `cj --format [directory-or-taskfile]`: format in place.
+- `cj --run <line>`: execute one non-block line without taskfile.
+- `cj --directives`: list directives.
+- `cj --completions <bash|zsh|fish>`: print completions.
+- `cj --install-completions <bash|zsh|fish>`: install completions.
+- `cj lsp`: stdio language server.
+- Nonempty `NO_COLOR`: stable plain output for scripts/tests.
 
-```cjtasks
-test:
-  cargo test --all-targets
+## Validate edits
 
-bundle:
-  @shell mkdir -p dist && cat src/*.js > dist/app.js
-```
-
-Use `@shell` only for actual shell syntax. Use `@open` only with one
-`http://` or `https://` URL.
-
-## Interpolate Variables Correctly
-
-- `$NAME` and `${NAME}` expand to an empty string when absent.
-- `${NAME?}` errors when absent.
-- `${NAME?fallback}` and `${NAME?"fallback text"}` use a fallback when absent.
-- `\$NAME` writes a literal variable marker.
-- An interpolated ordinary-command value remains one argv value.
-- `@shell` shell-quotes interpolated values before shell execution.
-
-## Manage Environment And Captured Output
-
-In top-level `@env:`, use `NAME: value` to override inherited values and
-`NAME?: value` to provide an absent-only fallback.
-
-Inside tasks:
-
-- Use `@set NAME value` for a CJ runtime variable.
-- Use `@set NAME:` with an indented block to capture its stdout.
-- Use `@export NAME` to expose a runtime variable to child processes.
-- Use `@unset NAME` to remove the runtime value and export.
-
-Runtime variables are internal until exported. Child processes receive the
-exported environment.
-
-## Compose Tasks And Status Flow
-
-Use `@task name arguments...` for sequential composition. It shares runtime
-state and current working directory while restoring called-task argument and
-directory scopes on return. Recursive task calls are errors.
-
-Use `@and` after success and `@or` after failure:
-
-```cjtasks
-check:
-  cargo test
-  @and
-    @echo tests passed
-  @or
-    @stop tests failed
-```
-
-Use `@success`, `@fail`, `@return`, or `@stop` for explicit status behavior.
-Use `@if`, `@if-not`, `@if-in`, `@if-not-in`, `@else`, `@if-exists`,
-`@if-not-exists`, `@if-set`, `@if-not-set`, `@switch`, `@case`, and `@default`
-for branching. Membership syntax is `@if-in $VALUE one two three`.
-
-## Run Parallel Tasks With Await
-
-Use `@await` to run named argument-free tasks in parallel. Its optional block
-runs only after every awaited task succeeds; handle failure with same-level
-`@or`.
-
-```cjtasks
-dev:
-  @await server client
-    @task open-browser
-  @or
-    @stop development services failed
-```
-
-Awaited tasks receive cloned runtime and directory state. They cannot use
-`@set`, `@export`, `@unset`, or version bump directives, including through static `@task`
-calls. They may change the filesystem. Await cycles and missing tasks are
-parse errors. Set `CJ_JOBS` to a positive integer to limit parallelism.
-
-## Manage Versions
-
-Declare SemVer without build metadata at the top level. A version named
-`app` creates `$VERSION_APP`.
-
-```cjtasks
-@version app 1.2.0
-
-release (LEVEL):
-  @switch $LEVEL
-    @case patch
-      @patch app
-    @case minor
-      @minor app
-    @case major
-      @major app
-  @if-bumped
-    @echo some version changed
-  @if-major app
-    @echo major release
-```
-
-Use `@major`, `@minor`, `@patch`, `@pre`, or `@release`. Each named
-version may be bumped once per invocation. `@if-bumped` with no arguments
-matches any bump; `@if-not-bumped` with no arguments matches no bumps. Use
-`@if-version`, `@if-not-version`, `@if-bumped`, `@if-not-bumped`, and the
-kind-specific `@if-patch` / `@if-not-patch` style directives for version
-conditions.
-
-## Work With Paths
-
-Use `@cd` and `@back` for scoped directory changes. Use `@mkdir`, `@clean`,
-`@cp`, `@cpdir`, and `@rename` for filesystem operations. Relative paths use
-the task's current working directory.
-
-## Document Tasks
-
-Use `@desc` for one-line summary text and `@help:` for indented detailed text.
-Use `@selfhelp` to print the current task's help and stop successfully.
-
-## Use The CLI
-
-- `cj` lists visible tasks.
-- `cj <task> [arguments...]` runs a task.
-- `cj <directory-or-taskfile> <task> [arguments...]` selects a taskfile.
-- `cj help [task]` prints taskfile or task help.
-- `cj --init` creates an empty `cjtasks` without overwriting a taskfile.
-- `cj --auto` imports common root-level task systems additively.
-- `cj --format [directory-or-taskfile]` formats a taskfile in place.
-- `cj --run <line>` executes one non-block task line without a taskfile.
-- `cj --directives` lists directives.
-- `cj --completions <bash|zsh|fish>` prints completions.
-- `cj --install-completions <bash|zsh|fish>` installs completions.
-- `cj lsp` starts the built-in language server over stdio.
-
-Set `NO_COLOR` to a non-empty value for stable plain-text output in scripts
-and tests.
-
-## Validate Changes
-
-After editing a taskfile:
-
-1. Run `cj --format`.
-2. Run `cj` to parse the file and inspect summary visibility.
-3. Run `cj help <task>` for changed help or nested tasks.
-4. Run the narrowest affected task.
-5. Confirm `@await` targets are argument-free and mutation-safe.
+1. `cj --format`.
+2. `cj` (parse + summary visibility).
+3. `cj help <task>` for changed help/nesting.
+4. Run narrowest affected task.
+5. Verify `@await` targets are argument-free/mutation-safe.

@@ -5,23 +5,39 @@
 <div align="center" style="margin:0;text-align:center;font-size:1.4em;">
   Independent task wrangler
 </div>
-<div align="center" style="display:flex;align-items:center;justify-content:center;margin-bottom:0;">
-<img alt="GitHub License" src="https://img.shields.io/github/license/jgusta/cjtaskrunner">
 
-  <img alt="version" src="https://img.shields.io/github/v/release/jgusta/cjtaskrunner">
-</div>
+
+
+<div align="center" style="display:flex;align-items:center;justify-content:center;margin-bottom:0;"><img alt="GitHub License" src="https://img.shields.io/github/license/jgusta/cjtaskrunner"> <img alt="version" src="https://img.shields.io/github/v/release/jgusta/cjtaskrunner"></div>
+
+
 
 ## About CJTaskrunner
 
-CJTaskrunner is a lightweight command-line task runner for Linux and macOS. It has a near-zero learning curve. The `cjtasks` file acts as one catalog for a repository's development, build, and release workflows.
+Designed for lazy people, CJTaskrunner is a lightweight command-line task runner for Linux and macOS. It does not expect you to learn it's syntax; it has a near-zero learning curve. The `cjtasks` file acts as one catalog for a repository's development, build, and release workflows. It is the `README.md` of task files.
+
+Unlike other task runners, our top priority is not having to learn anything. Type `cj` to see the tasks. If you write a task you can learn enough syntax by reading to the end of this sentence: task, colon, new line, space, space, command.
+
+- Guaranteed smallest taskrunner syntax.
+- Domain-specific language; the domain is terseness.
+- Guaranteed to lower cognitive load and the need to memorize anything.
+- No curly braces, no square braces, no underscores, no capital letters, no slashes, no dots.
+- You will not need to put things in quotation marks on CJTaskrunners' behalf. CJTaskrunner hates unnecessary quotation marks.
+- Strings are first class citizens in the sense that they have no semantic meaning to CJTaskrunner and don't require quotation marks or escaping.
+- Directive names, should you choose to use them, are the first thing on the line, and have no options.
+- Runs your tasks directly without using the shell (if you must use shell features, you can do that too).
+- You can nest tasks one level. **We don't let you go any deeper than that.**
+- All input to directives is user-supplied paths or strings. 
+- Hide the complexity or ugliness of your other scripts or task runners by using CJTaskrunner.
+- People viewing who know CJTaskrunner will always be stoked that you have a cjtasks file in your repo.
+
+## Get started
 
 Install the latest release:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/jgusta/cjtaskrunner/main/install.sh | bash
 ```
-
-## Get started
 
 ### Syntax
 
@@ -34,7 +50,8 @@ dev:
   npm run dev
 ```
 
-Run a task  by invoking its name from the same directory:
+Run a task by invoking its name from the same directory:
+
 ```shell
 > cj dev
 ```
