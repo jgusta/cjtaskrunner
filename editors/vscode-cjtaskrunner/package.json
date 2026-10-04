@@ -3,7 +3,7 @@
   "displayName": "CJTaskrunner",
   "description": "Taskfile language support and task runner view for CJTaskrunner.",
   "version": "0.1.0",
-  "publisher": "cjtaskrunner",
+  "publisher": "jgusta-dev",
   "private": false,
   "license": "MIT",
   "author": {
@@ -161,7 +161,7 @@
   "devDependencies": {
     "@types/node": "^20.11.30",
     "@types/vscode": "^1.85.0",
-    "@vscode/vsce": "^3.9.1",
+    "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.25.5",
     "typescript": "^5.4.5",
     "vscode-languageclient": "^9.0.1",
@@ -190,5 +190,8 @@
       "href": "https://github.com/jgusta/cjtaskrunner/tree/main/editors/vscode-cjtaskrunner",
       "description": "Project home"
     }
-  ]
+  ],
+  "allowScripts": {
+    "@vscode/vsce-sign@2.1.0": true
+  }
 }
