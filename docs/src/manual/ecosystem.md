@@ -14,10 +14,9 @@ task definitions, and formatting without requiring a second executable.
 
 ## VS Code extension
 
-The repository includes a
-[VS Code extension](../../../editors/vscode-cjtaskrunner/README.md) for syntax
-highlighting, Outline symbols, task discovery and execution, and integration
-with the built-in language server.
+[Official VS Code Extension](https://marketplace.visualstudio.com/items?itemName=jgusta-dev.cjtaskrunner-vscode&ssr=false#review-details)
+
+Provides a CJTASKS panel syntax highlighting and directive reference.
 
 ## Installation
 
