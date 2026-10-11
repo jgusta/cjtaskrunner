@@ -22,8 +22,13 @@ release:
     scripts/release-cli preflight
     @task _bump $VLEV cli
     @task release:_checks
-    scripts/release-cli verify $VERSION_CLI
-    scripts/release-cli commit-tag $VERSION_CLI
+    @and
+      scripts/release-cli verify $VERSION_CLI
+    @and
+      @task _bump $VLEV cli
+      scripts/release-cli commit-tag $VERSION_CLI
+    @or
+      @echo release failed
   publish:
     @desc atomically push the prepared CLI release commit and tag
     scripts/release-cli publish $VERSION_CLI
