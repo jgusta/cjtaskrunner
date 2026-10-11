@@ -270,9 +270,9 @@ ${NAME?"fallback value"}
 
 Rules:
 
-- `$NAME` reads the current CJTaskrunner variable value, or an empty string when absent.
-- `${NAME}` reads the current variable value, or an empty string when absent.
-- `${NAME?}` reads the current variable value and errors when absent.
+- `$NAME` reads the current CJTaskrunner variable value and errors when absent.
+- `${NAME}` reads the current variable value and errors when absent.
+- `${NAME?}` reads the current variable value or an empty string when absent.
 - `${NAME?fallback}` and `${NAME?"fallback value"}` use the fallback when `NAME` is absent.
 - `\$NAME` and `\${NAME}` escape interpolation.
 - Variable references are invalid in `@desc` text and every line of an `@help:` block. Escape the dollar sign to include literal variable-shaped text there; the escape is not displayed.

@@ -132,7 +132,7 @@ cp "$MOCK_RELEASE_DIR/${url##*/}" "$output"
             .expect("write checksums");
     }
 
-    fn run(&self, os: &str, arch: &str, version: Option<&str>) -> Output {
+    fn run(&self, os: &str, arch: &str) -> Output {
         let path = format!(
             "{}:{}",
             self.tools.display(),
@@ -149,9 +149,6 @@ cp "$MOCK_RELEASE_DIR/${url##*/}" "$output"
             .env("MOCK_UNAME_M", arch)
             .env("MOCK_RELEASE_DIR", &self.releases)
             .env("MOCK_CURL_LOG", &self.curl_log);
-        if let Some(version) = version {
-            command.env("CJ_VERSION", version);
-        }
         command.output().expect("run installer")
     }
 }
@@ -163,43 +160,19 @@ impl Drop for InstallerFixture {
 }
 
 #[test]
-fn installs_supported_platform_archives_from_release_urls() {
+fn installs_supported_platform_archives_from_latest_release_urls() {
     let cases = [
-        (
-            "Linux",
-            "x86_64",
-            "linux-x86_64",
-            "tar.gz",
-            "cj",
-            Some("1.2.3"),
-            "releases/download/v1.2.3",
-        ),
-        (
-            "Darwin",
-            "x86_64",
-            "macos-x86_64",
-            "tar.gz",
-            "cj",
-            None,
-            "releases/latest/download",
-        ),
-        (
-            "Darwin",
-            "arm64",
-            "macos-aarch64",
-            "tar.gz",
-            "cj",
-            Some("v2.0.0-beta.1"),
-            "releases/download/v2.0.0-beta.1",
-        ),
+        ("Linux", "x86_64", "linux-x86_64", "tar.gz", "cj"),
+        ("Darwin", "x86_64", "macos-x86_64", "tar.gz", "cj"),
+        ("Darwin", "arm64", "macos-aarch64", "tar.gz", "cj"),
     ];
 
-    for (os, arch, platform, archive_kind, executable, version, release_path) in cases {
+    for (os, arch, platform, archive_kind, executable) in cases {
         let fixture = InstallerFixture::new();
         fixture.add_archive(platform, archive_kind, executable);
         fixture.write_checksums();
 
-        let output = fixture.run(os, arch, version);
+        let output = fixture.run(os, arch);
         assert_success(&output);
         let installed = fixture.install.join(executable);
         assert!(
@@ -220,17 +193,16 @@ fn installs_supported_platform_archives_from_release_urls() {
 
         let log = fs::read_to_string(&fixture.curl_log).expect("read curl log");
         let archive = format!("cjtaskrunner-{platform}.{archive_kind}");
-        assert!(
-            log.contains(&format!(
-                "https://github.com/jgusta/cjtaskrunner/{release_path}/{archive}"
-            )),
-            "missing archive URL in log:\n{log}"
-        );
-        assert!(
-            log.contains(&format!(
-                "https://github.com/jgusta/cjtaskrunner/{release_path}/SHA256SUMS"
-            )),
-            "missing checksum URL in log:\n{log}"
+        assert_eq!(
+            log.lines().collect::<Vec<_>>(),
+            vec![
+                format!(
+                    "https://github.com/jgusta/cjtaskrunner/releases/latest/download/{archive}"
+                ),
+                "https://github.com/jgusta/cjtaskrunner/releases/latest/download/SHA256SUMS"
+                    .to_string(),
+            ],
+            "unexpected installer download URLs"
         );
     }
 }
@@ -245,7 +217,7 @@ fn rejects_an_archive_with_the_wrong_checksum() {
     )
     .expect("write invalid checksum");
 
-    let output = fixture.run("Linux", "x86_64", Some("1.2.3"));
+    let output = fixture.run("Linux", "x86_64");
     assert_failure_contains(&output, "checksum verification failed");
     assert!(!fixture.install.join("cj").exists());
 }
@@ -253,7 +225,7 @@ fn rejects_an_archive_with_the_wrong_checksum() {
 #[test]
 fn rejects_unsupported_platforms_before_downloading() {
     let fixture = InstallerFixture::new();
-    let output = fixture.run("Linux", "aarch64", None);
+    let output = fixture.run("Linux", "aarch64");
 
     assert_failure_contains(&output, "unsupported platform");
     assert!(!fixture.curl_log.exists());

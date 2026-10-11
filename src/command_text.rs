@@ -420,8 +420,10 @@ pub(crate) fn interpolate_text(
                 break;
             }
         }
-        let value = effective_env.get(&name).cloned().unwrap_or_default();
-        output.push_str(&quote_value(&value, quote_mode));
+        let value = effective_env
+            .get(&name)
+            .ok_or_else(|| CjError::new(format!("missing variable: {name}")))?;
+        output.push_str(&quote_value(value, quote_mode));
     }
     Ok(output)
 }
@@ -440,7 +442,6 @@ fn expand_braced(expression: &str, effective_env: &HashMap<String, String>) -> C
         })?;
         return match effective_env.get(name) {
             Some(value) => Ok(value.clone()),
-            None if fallback.is_empty() => Err(CjError::new(format!("missing variable: {name}"))),
             None => Ok(unquote_fallback(fallback).to_string()),
         };
     }
@@ -450,7 +451,10 @@ fn expand_braced(expression: &str, effective_env: &HashMap<String, String>) -> C
             "invalid variable interpolation '{expression}': {err}"
         ))
     })?;
-    Ok(effective_env.get(expression).cloned().unwrap_or_default())
+    effective_env
+        .get(expression)
+        .cloned()
+        .ok_or_else(|| CjError::new(format!("missing variable: {expression}")))
 }
 
 fn unquote_fallback(fallback: &str) -> &str {

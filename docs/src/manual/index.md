@@ -169,7 +169,7 @@ dev:
 
 You can use [variables](../reference/variables.md) by prefixing the name with a `$`. This is done before the task is parsed. You can substitute variable for a [directive](../reference/directives.md) argument.
 
-You can set a default for a variable or make a value mandatory when using them. Use [`${NAME?}`](../reference/variables.md#interpolation) when a value must exist, and [`${NAME?fallback}`](../reference/variables.md#interpolation) for local fallback values.
+You can set a default for a variable or make a value mandatory when using them. Use [`${NAME}`](../reference/variables.md#interpolation) when a value must exist, and [`${NAME?fallback}`](../reference/variables.md#interpolation) for local fallback values.
 
 You cannot use a variable as the name of a command in a [task definition](../reference/taskfile.md#tasks), nor can you substitute the name of a [directive](../reference/directives.md) using a variable.
 

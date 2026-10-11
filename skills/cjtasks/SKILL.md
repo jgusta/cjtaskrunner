@@ -46,8 +46,8 @@ description: Create, edit, run, and troubleshoot CJTaskrunner taskfiles and CLI 
 
 ## Variables/environment
 
-- `$NAME`, `${NAME}`: empty if absent.
-- `${NAME?}`: error if absent.
+- `$NAME`, `${NAME}`: error if absent.
+- `${NAME?}`: empty if absent.
 - `${NAME?fallback}`, `${NAME?"fallback text"}`: fallback if absent.
 - `\$NAME`: literal marker.
 - Interpolated ordinary-command value stays one argv; `@shell` shell-quotes interpolations.

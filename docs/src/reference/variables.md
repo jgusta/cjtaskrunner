@@ -62,16 +62,16 @@ Variables are resolved before sending to commands.
 show:
   @echo $NAME
   @echo "${NAME}"
-  @echo ${REQUIRED?}
+  @echo ${OPTIONAL?}
   @echo ${PORT?5173}
   @echo ${MESSAGE?"hello world"}
 ```
 
 Rules:
 
-- `$NAME` expands to the current value or an empty string.
-- `${NAME}` expands to the current value or an empty string.
-- `${NAME?}` errors when the [variable](definitions.md#variable) is missing.
+- `$NAME` expands to the current value and errors when absent.
+- `${NAME}` expands to the current value and errors when absent.
+- `${NAME?}` expands to the current value or an empty string when absent.
 - `${NAME?fallback}` uses `fallback` when the [variable](definitions.md#variable) is missing.
 - `${NAME?"fallback value"}` supports a quoted fallback.
 - In [ordinary commands](taskfile.md#ordinary-commands), an interpolated value remains one argv value.
