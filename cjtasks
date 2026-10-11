@@ -18,9 +18,9 @@ release:
   @desc prepare and publish CLI releases
   @selfhelp
   prep (VLEV):
-    @desc bump, test, commit tag
+    @desc _bump, test, commit tag
     scripts/release-cli preflight
-    @task bump $VLEV cli
+    @task _bump $VLEV cli
     @task release:_checks
     scripts/release-cli verify $VERSION_CLI
     scripts/release-cli commit-tag $VERSION_CLI
@@ -79,7 +79,7 @@ extension:
     @task extension:package
     code --install-extension dist/cjtaskrunner-vscode.vsix --force
 
-bump (LEVEL, PACKAGE):
+_bump (LEVEL, PACKAGE):
   @desc Increment and propagate version number
   @if-not-in $LEVEL patch minor major release
     @stop expected VLEV to be patch, minor, major, or release
