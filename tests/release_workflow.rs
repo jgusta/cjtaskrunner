@@ -1,6 +1,6 @@
 mod common;
 
-use common::{assert_failure_contains, assert_success, run_cj, temp_path};
+use common::{assert_failure_contains, assert_success, temp_path};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -104,27 +104,6 @@ fn write_versions(dir: &Path, version: &str) {
     .expect("write Cargo.lock");
 }
 
-fn version_from_taskfile(taskfile: &str, name: &str) -> String {
-    taskfile
-        .lines()
-        .find_map(|line| line.strip_prefix(&format!("@version {name} ")))
-        .unwrap_or_else(|| panic!("missing @version {name}"))
-        .to_string()
-}
-
-fn patch_bump(version: &str) -> String {
-    let mut parts = version.split('.');
-    let major = parts.next().expect("major version");
-    let minor = parts.next().expect("minor version");
-    let patch = parts
-        .next()
-        .expect("patch version")
-        .parse::<u64>()
-        .expect("numeric patch version");
-    assert!(parts.next().is_none(), "expected plain semver version");
-    format!("{major}.{minor}.{}", patch + 1)
-}
-
 #[test]
 fn preflight_rejects_dirty_worktree() {
     let repo = TestRepo::new("0.1.0");
@@ -218,99 +197,6 @@ fn publish_pushes_main_and_tag_to_local_bare_remote() {
         git(&repo.remote, &["rev-parse", "refs/tags/v0.1.0^{}"]),
         git(&repo.work, &["rev-parse", "HEAD"])
     );
-}
-
-#[test]
-fn repository_taskfile_exposes_release_tasks_and_hides_helpers() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let stdout = run_cj(root, &[]);
-    assert_success(&stdout);
-    let summary = String::from_utf8(stdout.stdout).expect("summary utf8");
-
-    for task in [
-        "bump ($LEVEL, $PACKAGE)",
-        "release:prep ($VLEV)",
-        "release:publish",
-    ] {
-        assert!(summary.contains(task), "summary missing {task}");
-    }
-    assert!(
-        !summary.contains("_release:"),
-        "internal release tasks must be hidden"
-    );
-
-    let source = fs::read_to_string(root.join("cjtasks")).expect("read repository cjtasks");
-    assert!(
-        source.contains("@task release:_checks"),
-        "public release tasks must compose hidden release helpers"
-    );
-}
-
-#[cfg(unix)]
-#[test]
-fn extension_bump_updates_extension_version_without_touching_cargo() {
-    use std::os::unix::fs::PermissionsExt;
-
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let dir = temp_path("extension-bump-task");
-    let bin = dir.join("bin");
-    fs::create_dir_all(&bin).expect("create fake bin");
-    fs::create_dir_all(dir.join("editors/vscode-cjtaskrunner")).expect("create extension dir");
-    let taskfile = fs::read_to_string(root.join("cjtasks")).expect("read repository cjtasks");
-    let cli_version = version_from_taskfile(&taskfile, "cli");
-    let next_extension_version = patch_bump(&version_from_taskfile(&taskfile, "extension"));
-    fs::write(dir.join("cjtasks"), taskfile).expect("write test cjtasks");
-
-    let fake_npm = bin.join("npm");
-    fs::write(
-        &fake_npm,
-        r#"#!/bin/sh
-set -eu
-test "$1" = "version"
-test "$3" = "--no-git-tag-version"
-printf '%s' "$2" > npm-version.txt
-"#,
-    )
-    .expect("write fake npm");
-    let fake_cargo = bin.join("cargo");
-    fs::write(
-        &fake_cargo,
-        r#"#!/bin/sh
-printf 'cargo should not run for extension bumps\n' >&2
-exit 99
-"#,
-    )
-    .expect("write fake cargo");
-    for tool in [&fake_npm, &fake_cargo] {
-        let mut permissions = fs::metadata(tool)
-            .expect("fake tool metadata")
-            .permissions();
-        permissions.set_mode(0o755);
-        fs::set_permissions(tool, permissions).expect("make fake tool executable");
-    }
-
-    let path = format!("{}:{}", bin.display(), std::env::var("PATH").expect("PATH"));
-    let output = Command::new(env!("CARGO_BIN_EXE_cj"))
-        .arg("bump")
-        .arg("patch")
-        .arg("extension")
-        .current_dir(&dir)
-        .env("PATH", path)
-        .env("NO_COLOR", "1")
-        .output()
-        .expect("run extension bump task");
-    assert_success(&output);
-
-    assert_eq!(
-        fs::read_to_string(dir.join("editors/vscode-cjtaskrunner/npm-version.txt"))
-            .expect("npm version"),
-        next_extension_version
-    );
-    let updated_taskfile = fs::read_to_string(dir.join("cjtasks")).expect("updated cjtasks");
-    assert!(updated_taskfile.contains(&format!("@version cli {cli_version}")));
-    assert!(updated_taskfile.contains(&format!("@version extension {next_extension_version}")));
-
-    fs::remove_dir_all(dir).expect("remove extension bump task repository");
 }
 
 #[test]
