@@ -60,21 +60,8 @@ check:
 
 See the [Rust CLI example](../../../example_tasks/rust-cli/README.md).
 
-## Continuous integration
-
-Install `cj` in the CI environment, then invoke the same public tasks used
-locally:
-
-```sh
-cargo install --path .
-cj check
-```
-
-Keep CI-only mechanics in underscore-prefixed tasks when they should remain
-callable without appearing in summary mode.
-
 ## Editors
 
-The [VS Code extension](../../../editors/vscode-cjtaskrunner/README.md) provides syntax highlighting, Outline symbols, task execution, language-server support, formatting, and an explorer panel.
+The [Visual Studio Code extension](../../../editors/vscode-cjtaskrunner/README.md) can be found in the VSCode Extensions panel or downloaded [here](https://marketplace.visualstudio.com/items?itemName=jgusta-dev.cjtaskrunner-vscode)
 
 See [Ecosystem](ecosystem.md).

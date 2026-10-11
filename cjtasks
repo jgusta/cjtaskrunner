@@ -81,6 +81,13 @@ extension:
     @task extension:package
     code --install-extension dist/cjtaskrunner-vscode.vsix --force
 
+  publish:
+    @desc test and publish the extension to the VS Code Marketplace
+    @cd editors/vscode-cjtaskrunner
+    npm ci
+    npm test
+    npm run publish:vsce
+
 _bump (LEVEL, PACKAGE):
   @desc Increment and propagate version number
   @if-not-in $LEVEL patch minor major release
