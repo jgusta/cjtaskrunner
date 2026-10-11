@@ -18,17 +18,14 @@ release:
   @desc prepare and publish CLI releases
   @selfhelp
   prep (VLEV):
-    @desc _bump, test, commit tag
+    @desc test, bump once, then commit and tag
+    @if-not-in $VLEV patch minor major release
+      @stop expected VLEV to be patch, minor, major, or release
     scripts/release-cli preflight
-    @task _bump $VLEV cli
     @task release:_checks
-    @and
-      scripts/release-cli verify $VERSION_CLI
-    @and
-      @task _bump $VLEV cli
-      scripts/release-cli commit-tag $VERSION_CLI
-    @or
-      @echo release failed
+    @task _bump $VLEV cli
+    scripts/release-cli verify $VERSION_CLI
+    scripts/release-cli commit-tag $VERSION_CLI
   publish:
     @desc atomically push the prepared CLI release commit and tag
     scripts/release-cli publish $VERSION_CLI
