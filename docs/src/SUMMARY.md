@@ -15,7 +15,7 @@
 - [Taskfile Reference](reference/taskfile.md)
 - [Variables Reference](reference/variables.md)
 
-## About
+# About
 - [CJTaskrunner is Not A Shell](manual/notashell.md)
 - [Philosophy](manual/philosophy.md)
 - [Comparisons](manual/comparisons.md)

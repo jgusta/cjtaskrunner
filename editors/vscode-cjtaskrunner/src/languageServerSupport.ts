@@ -107,7 +107,7 @@ function isExecutableFile(candidate: string, platform: string): boolean {
 }
 
 export function renderLanguageServerStatus(status: LanguageServerStatus): string {
-  const command = `${status.executable.displayPath} lsp`;
+  const command = `${status.executable.displayPath} --lsp`;
   return [
     "# CJTaskrunner Language Server",
     "",

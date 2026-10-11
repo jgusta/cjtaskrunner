@@ -32,6 +32,12 @@ pub(crate) fn run_cli_from_cwd(args: &[String], cwd: &Path) -> CjResult<i32> {
         return Ok(0);
     }
 
+    if args.first().is_some_and(|arg| arg == "--version") {
+        require_no_arguments(&args[1..], "--version")?;
+        println!("cj {}", env!("CARGO_PKG_VERSION"));
+        return Ok(0);
+    }
+
     if args.first().is_some_and(|arg| arg == "--directives") {
         print_directives();
         return Ok(0);
@@ -123,22 +129,6 @@ pub(crate) fn resolve_invocation_from(args: &[String], cwd: &Path) -> CjResult<I
         });
     }
 
-    if args[0] == "--default" || args[0] == "-d" {
-        return match args.len() {
-            1 => Ok(Invocation::Run {
-                task_file: discover_task_file(cwd)?,
-                task_name: "default".to_string(),
-                arguments: Vec::new(),
-            }),
-            2 => Ok(Invocation::Run {
-                task_file: resolve_task_file_target(&args[1], cwd)?,
-                task_name: "default".to_string(),
-                arguments: Vec::new(),
-            }),
-            _ => Err(CjError::new("usage: cj --default [taskfile-or-directory]")),
-        };
-    }
-
     let raw_target = PathBuf::from(&args[0]);
     let target = if raw_target.is_absolute() {
         raw_target
@@ -193,7 +183,7 @@ pub(crate) fn resolve_invocation_from(args: &[String], cwd: &Path) -> CjResult<I
 
 fn print_help() {
     println!(
-        "{}\n\n{}\n  cj\n  cj --help\n  cj --cli-help\n  cj --directives\n  cj --init\n  cj --auto\n  cj -e\n  cj --run <line>\n  cj lsp\n  cj help [section]\n  cj <task> [arguments...]\n  cj <taskfile-or-directory> <task> [arguments...]\n  cj --default [taskfile-or-directory]\n  cj -d [taskfile-or-directory]\n  cj --format [taskfile-or-directory]\n  cj --completions <bash|zsh|fish>\n  cj --install-completions <bash|zsh|fish>\n\nNo task name lists tasks in the detected taskfile.\nUse --init to create a taskfile.\nUse --auto to import tasks from common project task systems.\nUse -e to open the detected taskfile in $EDITOR.\nUse --default or -d to run the default task.\nUse --run to execute one task line without requiring a taskfile.\nUse cj help to show taskfile help.",
+        "{}\n\n{}\n  cj\n  cj --help\n  cj --version\n  cj --cli-help\n  cj --directives\n  cj --init\n  cj --auto\n  cj -e\n  cj --run <line>\n  cj --lsp\n  cj help [section]\n  cj <task> [arguments...]\n  cj <taskfile-or-directory> <task> [arguments...]\n  cj --format [taskfile-or-directory]\n  cj --completions <bash|zsh|fish>\n  cj --install-completions <bash|zsh|fish>\n\nNo task name lists tasks in the detected taskfile.\nUse --init to create a taskfile.\nUse --auto to import tasks from common project task systems.\nUse -e to open the detected taskfile in $EDITOR.\nUse --run to execute one task line without requiring a taskfile.\nUse cj help to show taskfile help.",
         paint("CJTaskrunner", Style::Header),
         paint("Usage:", Style::Section),
     );
@@ -348,11 +338,11 @@ _cj() {
   fi
 
   if [[ "$COMP_CWORD" -eq 1 ]]; then
-    COMPREPLY=( $(compgen -W "--help --cli-help --directives --init --auto -e --run --default -d --format --completions --install-completions help lsp $(_cj_tasks)" -- "$cur") )
+    COMPREPLY=( $(compgen -W "--help --cli-help --directives --init --auto -e --run --version --format --completions --install-completions help --lsp $(_cj_tasks)" -- "$cur") )
     return 0
   fi
 
-  if [[ "$prev" == "--format" || "$prev" == "--run" || "$prev" == "--default" || "$prev" == "-d" ]]; then
+  if [[ "$prev" == "--format" || "$prev" == "--run" ]]; then
     compopt -o default 2>/dev/null
     return 0
   fi
@@ -371,7 +361,7 @@ _cj_tasks() {
 
 _cj() {
   local -a commands shells tasks
-  commands=(--help --cli-help --directives --init --auto -e --run --default -d --format --completions --install-completions help lsp)
+  commands=(--help --cli-help --directives --init --auto -e --run --version --format --completions --install-completions help --lsp)
   shells=(bash zsh fish)
   tasks=(${(f)"$(_cj_tasks)"})
 
@@ -391,7 +381,7 @@ _cj() {
     return
   fi
 
-  if [[ ${words[CURRENT-1]} == "--format" || ${words[CURRENT-1]} == "--run" || ${words[CURRENT-1]} == "--default" || ${words[CURRENT-1]} == "-d" ]]; then
+  if [[ ${words[CURRENT-1]} == "--format" || ${words[CURRENT-1]} == "--run" ]]; then
     _files
     return
   fi
@@ -424,7 +414,7 @@ end
 complete -c cj -f -n '__fish_use_subcommand' -a '(__cj_tasks)' -d 'Task'
 
 complete -c cj -f -n '__fish_use_subcommand' -a 'help' -d 'Show taskfile help'
-complete -c cj -f -n '__fish_use_subcommand' -a 'lsp' -d 'Start language server'
+complete -c cj -l lsp -d 'Start language server'
 complete -c cj -f -n '__fish_seen_subcommand_from help' -a '(__cj_tasks)' -d 'Task help'
 
 complete -c cj -l help -d 'Show CLI help'
@@ -434,7 +424,7 @@ complete -c cj -l init -d 'Create a cjtasks file'
 complete -c cj -l auto -d 'Import common project tasks'
 complete -c cj -s e -d 'Open taskfile in $EDITOR'
 complete -c cj -l run -r -d 'Run one task line'
-complete -c cj -l default -s d -r -d 'Run default task'
+complete -c cj -l version -d 'Show version'
 complete -c cj -l format -r -d 'Format taskfile'
 complete -c cj -l completions -f -a 'bash zsh fish' -d 'Print shell completions'
 complete -c cj -l install-completions -f -a 'bash zsh fish' -d 'Install shell completions'

@@ -363,7 +363,7 @@ fn rejects_help_without_colon() {
 }
 
 #[test]
-fn default_flag_runs_default_task() {
+fn default_task_runs_by_name() {
     let dir = test_path("default-flag");
     fs::create_dir_all(&dir).expect("mkdir");
     fs::write(
@@ -372,7 +372,7 @@ fn default_flag_runs_default_task() {
     )
     .expect("write cjtasks");
 
-    let code = run_cli_from_cwd(&["--default".to_string()], &dir).expect("default");
+    let code = run_cli_from_cwd(&["default".to_string()], &dir).expect("default");
     assert_eq!(code, 0);
     assert_eq!(
         fs::read_to_string(dir.join("default.txt")).expect("read"),

@@ -76,3 +76,38 @@ fn edit_flag_requires_editor() {
 
     fs::remove_dir_all(dir).expect("cleanup");
 }
+
+#[test]
+fn version_flag_works_without_a_taskfile_and_rejects_arguments() {
+    let dir = temp_path("version-flag");
+    fs::create_dir_all(&dir).expect("mkdir");
+    let output = run_cj(&dir, &["--version"]);
+    assert_eq!(
+        assert_success(&output),
+        format!("cj {}\n", env!("CARGO_PKG_VERSION"))
+    );
+    assert!(assert_failure(&run_cj(&dir, &["--version", "extra"])).contains("usage: cj --version"));
+    fs::remove_dir_all(dir).expect("cleanup");
+}
+
+#[test]
+fn removed_default_flags_do_not_run_a_task() {
+    let dir = temp_path("removed-default-flags");
+    fs::create_dir_all(&dir).expect("mkdir");
+    fs::write(dir.join("cjtasks"), "default:\n  @success\n").expect("taskfile");
+    for flag in ["--default", "-d"] {
+        assert_failure(&run_cj(&dir, &[flag]));
+    }
+    assert_success(&run_cj(&dir, &["default"]));
+    fs::remove_dir_all(dir).expect("cleanup");
+}
+
+#[test]
+fn lsp_flag_rejects_arguments_and_lsp_is_an_ordinary_task_name() {
+    let dir = temp_path("lsp-flag");
+    fs::create_dir_all(&dir).expect("mkdir");
+    assert!(assert_failure(&run_cj(&dir, &["--lsp", "extra"])).contains("usage: cj --lsp"));
+    fs::write(dir.join("cjtasks"), "lsp:\n  @echo ordinary-task\n").expect("taskfile");
+    assert!(assert_success(&run_cj(&dir, &["lsp"])).contains("ordinary-task"));
+    fs::remove_dir_all(dir).expect("cleanup");
+}

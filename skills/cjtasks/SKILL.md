@@ -95,7 +95,7 @@ description: Create, edit, run, and troubleshoot CJTaskrunner taskfiles and CLI 
 - `cj --directives`: list directives.
 - `cj --completions <bash|zsh|fish>`: print completions.
 - `cj --install-completions <bash|zsh|fish>`: install completions.
-- `cj lsp`: stdio language server.
+- `cj --lsp`: stdio language server.
 - Nonempty `NO_COLOR`: stable plain output for scripts/tests.
 
 ## Validate edits

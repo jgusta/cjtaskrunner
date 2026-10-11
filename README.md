@@ -53,13 +53,21 @@ Unlike other task runners, our top priority is not having to learn anything. Typ
 ### Other features
 
 - Domain-specific language; the domain is terseness.
+
 - No curly braces, no square braces, no underscores, no capital letters, no slashes, no dots.
+
 - You will not need to put things in quotation marks on CJTaskrunners' behalf. CJTaskrunner hates unnecessary quotation marks.
+
 - Strings are first class citizens in the sense that they have no semantic meaning to CJTaskrunner.
+
 - Runs your tasks directly without using the shell.
+
 - You can nest tasks one level. **We don't let you go any deeper than that.**
+
 - All input to directives is user-supplied paths or strings. 
+
 - Hide the complexity or ugliness of your other scripts or task runners by using CJTaskrunner.
+
 - People viewing who know CJTaskrunner will always be stoked that you have a cjtasks file in your repo.
 
 ## Get started

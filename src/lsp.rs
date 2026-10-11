@@ -89,7 +89,7 @@ impl LanguageServer for Backend {
                 ..ServerCapabilities::default()
             },
             server_info: Some(ServerInfo {
-                name: "cj lsp".to_string(),
+                name: "cj --lsp".to_string(),
                 version: Some(env!("CARGO_PKG_VERSION").to_string()),
             }),
         })
@@ -97,7 +97,7 @@ impl LanguageServer for Backend {
 
     async fn initialized(&self, _: InitializedParams) {
         self.client
-            .log_message(MessageType::INFO, "cj lsp initialized")
+            .log_message(MessageType::INFO, "cj --lsp initialized")
             .await;
     }
 

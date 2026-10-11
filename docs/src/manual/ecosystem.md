@@ -8,7 +8,7 @@ shell completions, and exposes the language server. See
 
 ## Built-in LSP
 
-CJTaskrunner serves its language protocol implementation through `cj lsp`.
+CJTaskrunner serves its language protocol implementation through `cj --lsp`.
 It provides diagnostics, completion, hover information, document symbols,
 task definitions, and formatting without requiring a second executable.
 

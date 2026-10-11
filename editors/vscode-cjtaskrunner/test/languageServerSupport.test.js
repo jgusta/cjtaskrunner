@@ -65,7 +65,7 @@ const status = renderLanguageServerStatus({
 
 assert.match(status, /^# CJTaskrunner Language Server/m);
 assert.match(status, /State: running/);
-assert.match(status, /Command: .*target[/\\]debug[/\\]cj lsp/);
+assert.match(status, /Command: .*target[/\\]debug[/\\]cj --lsp/);
 assert.match(status, /Trace: messages/);
 assert.match(status, /Outline: Language server with extension fallback/);
 

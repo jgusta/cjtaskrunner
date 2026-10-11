@@ -46,6 +46,6 @@ Variable-shaped text keeps its variable scope inside documentation prose so inva
 ## Commands
 
 - `CJTaskrunner: Language Server Status`: Open a status document showing the resolved `cj` path, server state, trace setting, Outline mode, and last error.
-- `CJTaskrunner: Restart Language Server`: Stop and start `cj lsp` after changing settings or rebuilding the binary.
+- `CJTaskrunner: Restart Language Server`: Stop and start `cj --lsp` after changing settings or rebuilding the binary.
 - `CJTaskrunner: Show Language Server Output`: Open the language server output channel.
 

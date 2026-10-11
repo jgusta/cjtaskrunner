@@ -74,7 +74,7 @@ export class CjLanguageServerManager implements vscode.Disposable {
     }
     this.state = "starting";
     this.refreshStatus();
-    this.output.appendLine(`[${new Date().toISOString()}] Starting ${executable.displayPath} lsp`);
+    this.output.appendLine(`[${new Date().toISOString()}] Starting ${executable.displayPath} --lsp`);
 
     const nextClient = this.createClient(executable);
     this.client = nextClient;
@@ -165,7 +165,7 @@ export class CjLanguageServerManager implements vscode.Disposable {
   private createClient(executable: ExecutableResolution): LanguageClient {
     const serverOptions: ServerOptions = {
       command: executable.command,
-      args: ["lsp"]
+      args: ["--lsp"]
     };
     const clientOptions: LanguageClientOptions = {
       documentSelector: DOCUMENT_SELECTOR,

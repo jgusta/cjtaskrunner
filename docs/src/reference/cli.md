@@ -4,6 +4,7 @@
 cj [task] [arguments...]
 cj <taskfile-or-directory>
 cj <taskfile-or-directory> <task> [arguments...]
+cj --version
 cj --init
 cj --auto
 cj -e
@@ -12,8 +13,10 @@ cj --run <line>
 cj --directives
 cj --completions <bash|zsh|fish>
 cj --install-completions <bash|zsh|fish>
-cj lsp
+cj --lsp
 ```
+
+`cj --version` prints the installed CLI version without requiring a taskfile.
 
 ## Running Tasks
 
@@ -135,10 +138,10 @@ cj --install-completions zsh
 
 ## Language server
 
-`cj lsp` starts the language server over stdio. The language server is part of the main executable; there is no separate LSP binary.
+`cj --lsp` starts the language server over stdio. The language server is part of the main executable; there is no separate LSP binary.
 
 ```sh
-cj lsp
+cj --lsp
 ```
 
 ## Miscellaneous
