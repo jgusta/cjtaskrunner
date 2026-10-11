@@ -1,7 +1,6 @@
 # CJTaskrunner Example Projects
 
-These examples are small projects with real `cjtasks` files. They are meant to
-show current CJTaskrunner syntax, not just wrap package-manager commands.
+These examples are small projects with `cjtasks` files. They are meant to show the capabilities of CJTaskrunner syntax. We don't recommend doing everything in CJTaskrunner, but for some really simple pesky tasks such as making 
 
 Run an example from inside its directory:
 
@@ -11,11 +10,11 @@ cj
 cj check
 ```
 
-## What The Examples Show
+## Features demonstrated
 
 - Task arguments such as `run ($MODE)` and `build ($PROFILE)`.
 - Hidden helper tasks beginning with `_`.
-- Runtime variables with `@set`, captured output, `@export`, and `@unset`.
+- Runtime variables with `@set`, captured output with `@set:`, `@export`, and `@unset`.
 - Conditional blocks with `@if`, `@if-not`, `@if-in`, `@if-not-in`,
   `@if-exists`, `@if-not-exists`, `@if-version`, and `@switch`.
 - Parallel branches with `@await` plus `@or` failure handling.

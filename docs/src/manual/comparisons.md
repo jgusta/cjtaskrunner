@@ -4,6 +4,17 @@ Task runners are often tied to a language ecosystem or designed around build
 artifacts. CJTaskrunner instead provides a small, project-local catalog of
 imperative commands.
 
+## `just`
+- Inspired by make
+- Lists recipes from command line
+- Really simple to use
+- Rich expression language
+- Built-in functions
+- Support for modules and imports
+- Uses the shell for execution
+- Tasks can be shell scripts
+- Supports arbitrary scripting language
+
 ## `make`
 
 - Target-based

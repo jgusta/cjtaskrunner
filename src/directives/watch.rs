@@ -88,7 +88,7 @@ fn watch_action_line(
     let expressions = split_line_expressions(&action.text);
     if expressions.len() != 1 {
         return Err(CjError::new(format!(
-            "line {}: @watch action must be one expression",
+            "line {}: @watch action must be one expression. If you need to run more, wrap them in another task and use @task to call them in the @watch action",
             action.line_number
         )));
     }
@@ -246,7 +246,7 @@ fn wait_for_restart_or_finish(
                 return wait_for_debounce(done_rx, event_rx);
             }
             Ok(Ok(_)) => {}
-            Ok(Err(err)) => return Err(CjError::new(format!("file watch failed: {err}"))),
+            Ok(Err(err)) => return Err(CjError::new(format!("file watcher failed: {err}"))),
             Err(RecvTimeoutError::Timeout) => {}
             Err(RecvTimeoutError::Disconnected) => {
                 return Err(CjError::new("file watcher stopped unexpectedly"));
@@ -270,7 +270,7 @@ fn wait_for_debounce(
         let _ = done_rx.try_recv();
         match event_rx.recv_timeout(wait) {
             Ok(Ok(_)) => {}
-            Ok(Err(err)) => return Err(CjError::new(format!("file watch failed: {err}"))),
+            Ok(Err(err)) => return Err(CjError::new(format!("file watcher failed: {err}"))),
             Err(RecvTimeoutError::Timeout) => {}
             Err(RecvTimeoutError::Disconnected) => {
                 return Err(CjError::new("file watcher stopped unexpectedly"));

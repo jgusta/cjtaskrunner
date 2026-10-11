@@ -16,16 +16,47 @@
 
 Designed for lazy people, CJTaskrunner is a lightweight command-line task runner for Linux and macOS. It does not expect you to learn it's syntax; it has a near-zero learning curve. The `cjtasks` file acts as one catalog for a repository's development, build, and release workflows. It is the `README.md` of task files.
 
-Unlike other task runners, our top priority is not having to learn anything. Type `cj` to see the tasks. If you write a task you can learn enough syntax by reading to the end of this sentence: task, colon, new line, space, space, command.
+### Why use CJTaskrunner instead of `just`?
 
-- Guaranteed smallest taskrunner syntax.
+CJTaskrunner and `just` can be considers to have overlapping uses, but very different philosophies on how to achieve them. Specifically CJTaskrunner is obsessed with terseness, simplicity, consistency and independence from `sh` or your system shell. 
+
+Can CJTaskrunner replace `just`? No, in fact that is our guarantee to you: CJTaskrunner will not replace any of the tools you use. 
+
+### CJTaskrunner will not replace any of your tools
+
+- CJTaskrunner is not a shell
+
+- `cjtasks` files will not host your shell scripts. 
+
+- CJTaskrunner directives cannot be used as arbitrary functions.
+
+- Directives don't have options. Arguments are paths or user-supplied strings.
+
+- Directives cannot be used anywhere except the beginning of a line.
+
+- CJTaskrunner has no expression language.
+
+- CJTaskrunner operates with a snapshot of your environment. It cannot change the environment outside of its runtime.
+
+### Limited by design
+
+All advertised limitations are by design. You may find yourself pushing the limits of CJTaskrunner. This is how CJTaskrunner minimizes the cognitive load it imposes on you.
+
+It doesn't try to replace your complicated scripts, it just makes sure that no matter what type of ecosystem you are using, you discover and run tasks using the same simple syntax. 
+
+The only complexity in your `cjtasks` files are the options in your command-line executables. CJTaskrunner can only substitute variables into the task before it is run. Directives cannot be used to interpolate values Copy/paste the command that runs your script, not the script itself.
+
+The `cjtasks` file is the anchor, tasks are run using its containing directory as the working directory, regardless of where it is run from.
+
+Unlike other task runners, our top priority is not having to learn anything. Type `cj` to see the tasks.
+
+### Other features
+
 - Domain-specific language; the domain is terseness.
-- Guaranteed to lower cognitive load and the need to memorize anything.
 - No curly braces, no square braces, no underscores, no capital letters, no slashes, no dots.
 - You will not need to put things in quotation marks on CJTaskrunners' behalf. CJTaskrunner hates unnecessary quotation marks.
-- Strings are first class citizens in the sense that they have no semantic meaning to CJTaskrunner and don't require quotation marks or escaping.
-- Directive names, should you choose to use them, are the first thing on the line, and have no options.
-- Runs your tasks directly without using the shell (if you must use shell features, you can do that too).
+- Strings are first class citizens in the sense that they have no semantic meaning to CJTaskrunner.
+- Runs your tasks directly without using the shell.
 - You can nest tasks one level. **We don't let you go any deeper than that.**
 - All input to directives is user-supplied paths or strings. 
 - Hide the complexity or ugliness of your other scripts or task runners by using CJTaskrunner.

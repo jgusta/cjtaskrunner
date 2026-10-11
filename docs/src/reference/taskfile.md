@@ -47,7 +47,7 @@ goodbye:
 ## Command Lines
 
 Tasks are bash-like in that they resemble `bash` commands, and most of the time
-you should be able to just use any bash command as a task. Commands are split
+you should be able to just use any bash command as a task. However, CJTaskrunner is not a shell, nor does it run commands through the shell. Insteads, commands are split
 into arguments before invoking them on the named executable. Variables are
 substituted before the command is run, so the command will only see the resolved
 value.
@@ -57,10 +57,10 @@ they will not be seen by a shell. So you cannot have a task for example `ls *`
 because the `*` is a `bash` token that expands to a list of file names before
 being sent to `ls`.
 
-However, if you do need to use shell-specific features, you can use the `@shell` directive.
+However, if you do need to use shell-specific features, you can use the `@shell` directive. This should be avoided whenever possible as it couples your taskfiles to your shell. Instead we recommend either putting your shell-specific commands into a shell script, or if your needs are simple enough, use CJTaskrunner directives.
 
 CJTaskrunner uses a small domain-specific language, so taskfiles require no
-language runtime beyond the operating system shell used by `@shell`.
+language runtime unless you use `@shell` in which case it depends on the operating system shell.
 
 The language is line-based and indentation-sensitive. The official format uses
 two spaces per indentation level. The parser also accepts one leading tab per
