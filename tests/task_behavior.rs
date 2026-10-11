@@ -41,7 +41,7 @@ fn shell_directive_quotes_interpolated_values() {
 }
 
 #[test]
-fn braced_interpolation_defaults_to_empty_and_supports_required_forms() {
+fn interpolation_requires_variables_unless_a_fallback_is_given() {
     let dir = temp_path("braced-vars");
     fs::create_dir_all(&dir).expect("mkdir");
     write_taskfile(
@@ -49,9 +49,11 @@ fn braced_interpolation_defaults_to_empty_and_supports_required_forms() {
         r#"@env:
   EMPTY:
 run:
-  @shell printf '%s|%s|%s|%s|%s' ${MISSING} ${EMPTY} ${MISSING?fallback} ${MISSING?"quoted fallback"} ${EMPTY?} > out.txt
+  @shell printf '%s|%s|%s|%s|%s' ${MISSING?} ${EMPTY} ${MISSING?fallback} ${MISSING?"quoted fallback"} ${EMPTY?} > out.txt
 required:
-  @echo ${MISSING?}
+  @echo ${MISSING}
+required-unbraced:
+  @echo $MISSING
 invalid-interpolation:
   @echo ${1BAD}
 "#,
@@ -63,8 +65,10 @@ invalid-interpolation:
         "||fallback|quoted fallback|"
     );
 
-    let stderr = assert_failure(&run_cj(&dir, &["required"]));
-    assert!(stderr.contains("missing variable: MISSING"));
+    for task in ["required", "required-unbraced"] {
+        let stderr = assert_failure(&run_cj(&dir, &[task]));
+        assert!(stderr.contains("missing variable: MISSING"));
+    }
 
     let stderr = assert_failure(&run_cj(&dir, &["invalid-interpolation"]));
     assert!(stderr.contains("invalid variable interpolation"));
