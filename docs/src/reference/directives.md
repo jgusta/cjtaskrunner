@@ -78,6 +78,8 @@ Directive lines
 - [`@mkdir`](#mkdir) - create directories.
 - [`@cp`](#cp) - copy files.
 - [`@cpdir`](#cpdir) - copy directories.
+- [`@zip`](#zip) - create a zip archive.
+- [`@unzip`](#unzip) - extract a zip archive.
 - [`@rename`](#rename) - rename a file or directory.
 
 ### Documentation Metadata
@@ -789,6 +791,22 @@ package:
 `@cpdir source... destination` copies directories recursively. A trailing slash
 on a source copies that directory's contents into the destination. Multiple
 sources require a directory destination.
+
+<a id="zip"></a>
+
+### `@zip`
+
+`@zip source... output` creates `output.zip` (unless the name already ends in
+`.zip`). Directory contents are placed at the archive root. Files matching certain filename patterns are ignored. These names are built-in to CJTaskrunner. You can see this list at the [ignored names list](ignored-names.md)
+
+<a id="unzip"></a>
+
+### `@unzip`
+
+`@unzip archive.zip [destination]` extracts into a directory named after the
+archive (without `.zip`). With no destination, this directory is placed beside
+the archive; otherwise it is placed inside the given destination. A single
+top-level directory in the archive is flattened into the named destination.
 
 <a id="rename"></a>
 

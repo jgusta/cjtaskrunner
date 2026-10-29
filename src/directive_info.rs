@@ -85,6 +85,16 @@ directives!(
     ("cp", "Copy one or more files.", AtLeast(2)),
     ("cpdir", "Copy one or more directories.", AtLeast(2)),
     (
+        "zip",
+        "Create a zip archive from files and directory contents.",
+        AtLeast(2)
+    ),
+    (
+        "unzip",
+        "Extract a zip archive into a folder named after the archive.",
+        AtLeast(1)
+    ),
+    (
         "rename",
         "Rename a file or directory without moving it.",
         Exactly(2)

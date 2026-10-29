@@ -21,7 +21,7 @@ mod watch;
 use conditions::evaluate_condition;
 pub(crate) use conditions::if_condition_error;
 pub(crate) use conditions::if_in_condition_error;
-use filesystem::{copy_dirs, copy_files, remove_path, rename_path};
+use filesystem::{copy_dirs, copy_files, remove_path, rename_path, unzip_path, zip_paths};
 pub(crate) use values::parse_variable_name_token;
 use values::{
     is_set_capture_args, parse_env_mutation, parse_export_mutation,
@@ -168,6 +168,18 @@ pub(crate) fn execute_directive(
         "cpdir" => {
             let argv = interpolate_argv(args, &ctx.env.vars)?;
             copy_dirs(ctx.cwd.current(), &argv, lines[*index].line_number)?;
+            *index += 1;
+            Ok(0)
+        }
+        "zip" => {
+            let argv = interpolate_argv(args, &ctx.env.vars)?;
+            zip_paths(ctx.cwd.current(), &argv, lines[*index].line_number)?;
+            *index += 1;
+            Ok(0)
+        }
+        "unzip" => {
+            let argv = interpolate_argv(args, &ctx.env.vars)?;
+            unzip_path(ctx.cwd.current(), &argv, lines[*index].line_number)?;
             *index += 1;
             Ok(0)
         }
