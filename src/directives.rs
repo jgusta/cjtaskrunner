@@ -5,28 +5,32 @@ use crate::command_text::{
     interpolate_argv, interpolate_shell_text, interpolate_text, run_open_url, run_shell_command,
 };
 use crate::help_output::format_task_help;
-use crate::runner::{
-    execute_await_tasks, execute_block, execute_block_capture, run_task_inner, ExecutionContext,
-};
-use crate::runtime::{BumpKind, QuoteMode, RuntimeEnv};
+use crate::runner::{execute_block, execute_block_capture, run_task_inner, ExecutionContext};
+use crate::runtime::QuoteMode;
 use crate::task_file::{validate_env_name, TaskLine};
-use crate::version::bump_taskfile_version;
 use crate::{CjError, CjResult};
 
+mod await_directive;
 mod conditions;
 mod filesystem;
+mod if_directive;
+mod switch_directive;
 mod values;
+mod version_bump;
 mod watch;
 
-use conditions::evaluate_condition;
+use await_directive::execute_await_directive;
 pub(crate) use conditions::if_condition_error;
 pub(crate) use conditions::if_in_condition_error;
 use filesystem::{copy_dirs, copy_files, remove_path, rename_path, unzip_path, zip_paths};
+use if_directive::execute_if_directive;
+use switch_directive::execute_switch_directive;
 pub(crate) use values::parse_variable_name_token;
 use values::{
     is_set_capture_args, parse_env_mutation, parse_export_mutation,
     parse_set_capture_name_with_env, return_value_status, write_output_line,
 };
+use version_bump::execute_version_bump_directive;
 use watch::execute_watch_directive;
 
 pub(crate) fn execute_directive(
@@ -303,152 +307,6 @@ fn validate_open_url(url: &str, line_number: usize) -> CjResult<()> {
     }
 }
 
-fn execute_await_directive(
-    ctx: &mut ExecutionContext<'_>,
-    lines: &[TaskLine],
-    index: &mut usize,
-    end: usize,
-    indent: usize,
-    args: &str,
-) -> CjResult<i32> {
-    let awaited_tasks = interpolate_argv(args, &ctx.env.vars)?;
-    if awaited_tasks.is_empty() {
-        return Err(CjError::new(format!(
-            "line {}: @await expects at least one task name",
-            lines[*index].line_number
-        )));
-    }
-    let block_start = *index + 1;
-    let block_end = find_block_end(lines, block_start, end, indent);
-    *index = if block_start < block_end {
-        block_end
-    } else {
-        *index + 1
-    };
-
-    let status = if ctx.env.await_blocks_satisfied {
-        0
-    } else {
-        execute_await_tasks(ctx.task_file, &awaited_tasks, ctx.env, ctx.cwd)?
-    };
-    ctx.env.sync_exports();
-    if status != 0 || block_start == block_end {
-        return Ok(status);
-    }
-    execute_block(ctx, lines, block_start, block_end, indent + 2)
-}
-
-fn execute_if_directive(
-    ctx: &mut ExecutionContext<'_>,
-    lines: &[TaskLine],
-    index: &mut usize,
-    end: usize,
-    indent: usize,
-    name: &str,
-    args: &str,
-) -> CjResult<i32> {
-    let condition = evaluate_condition(ctx.cwd.current(), name, args, ctx.env)?;
-    let then_start = *index + 1;
-    let then_end = find_block_end(lines, then_start, end, indent);
-    let mut else_range = None;
-
-    if then_end < end && lines[then_end].indent == indent && lines[then_end].text == "@else" {
-        let else_start = then_end + 1;
-        let else_end = find_block_end(lines, else_start, end, indent);
-        else_range = Some((else_start, else_end));
-        *index = else_end;
-    } else {
-        *index = then_end;
-    }
-
-    if condition {
-        execute_block(ctx, lines, then_start, then_end, indent + 2)
-    } else if let Some((else_start, else_end)) = else_range {
-        execute_block(ctx, lines, else_start, else_end, indent + 2)
-    } else {
-        Ok(0)
-    }
-}
-
-fn execute_switch_directive(
-    ctx: &mut ExecutionContext<'_>,
-    lines: &[TaskLine],
-    index: &mut usize,
-    end: usize,
-    indent: usize,
-    args: &str,
-) -> CjResult<i32> {
-    let values = interpolate_argv(args, &ctx.env.vars)?;
-    if values.len() != 1 {
-        return Err(CjError::new(format!(
-            "line {}: @switch expects exactly one value",
-            lines[*index].line_number
-        )));
-    }
-    let switch_value = &values[0];
-    let switch_start = *index + 1;
-    let switch_end = find_block_end(lines, switch_start, end, indent);
-    let case_indent = indent + 2;
-    let body_indent = indent + 4;
-    let mut selected: Option<(usize, usize)> = None;
-    let mut default: Option<(usize, usize)> = None;
-    let mut cursor = switch_start;
-
-    while cursor < switch_end {
-        let line = &lines[cursor];
-        if line.indent != case_indent {
-            return Err(CjError::new(format!(
-                "line {}: @switch body must contain @case or @default entries",
-                line.line_number
-            )));
-        }
-        let Some(rest) = line.text.strip_prefix('@') else {
-            return Err(CjError::new(format!(
-                "line {}: @switch body entries must use @case or @default",
-                line.line_number
-            )));
-        };
-        let (name, args) = split_directive(rest);
-        if name != "case" && name != "default" {
-            return Err(CjError::new(format!(
-                "line {}: @switch body entries must use @case or @default",
-                line.line_number
-            )));
-        }
-
-        let body_start = cursor + 1;
-        let body_end = find_case_body_end(lines, body_start, switch_end, case_indent);
-        if name == "case" {
-            let case_values = interpolate_argv(args, &ctx.env.vars)?;
-            if case_values.len() != 1 {
-                return Err(CjError::new(format!(
-                    "line {}: @case expects exactly one value",
-                    line.line_number
-                )));
-            }
-            if selected.is_none() && case_values[0] == *switch_value {
-                selected = Some((body_start, body_end));
-            }
-        } else {
-            if !args.trim().is_empty() {
-                return Err(CjError::new(format!(
-                    "line {}: @default does not take arguments",
-                    line.line_number
-                )));
-            }
-            default.get_or_insert((body_start, body_end));
-        }
-        cursor = body_end;
-    }
-
-    *index = switch_end;
-    if let Some((start, end)) = selected.or(default) {
-        execute_block(ctx, lines, start, end, body_indent)
-    } else {
-        Ok(0)
-    }
-}
-
 pub(crate) fn find_block_end(
     lines: &[TaskLine],
     start: usize,
@@ -460,54 +318,6 @@ pub(crate) fn find_block_end(
         cursor += 1;
     }
     cursor
-}
-
-fn find_case_body_end(lines: &[TaskLine], start: usize, end: usize, case_indent: usize) -> usize {
-    let mut cursor = start;
-    while cursor < end && lines[cursor].indent > case_indent {
-        cursor += 1;
-    }
-    cursor
-}
-
-fn execute_version_bump_directive(
-    ctx: &mut ExecutionContext<'_>,
-    operation: &str,
-    args: &str,
-    line_number: usize,
-) -> CjResult<()> {
-    let argv = interpolate_argv(args, &ctx.env.vars)?;
-    let (name, prerelease) = match (operation, argv.as_slice()) {
-        ("pre", [name, prerelease]) => (name, Some(prerelease.as_str())),
-        ("pre", _) => {
-            return Err(CjError::new(format!(
-                "line {line_number}: @pre expects '<name> <prerelease>'"
-            )))
-        }
-        (_, [name]) => (name, None),
-        _ => {
-            return Err(CjError::new(format!(
-                "line {line_number}: @{operation} expects exactly one version name"
-            )))
-        }
-    };
-    let kind = BumpKind::parse(operation).expect("version bump directive must be a bump kind");
-    ensure_not_bumped(ctx.env, name, line_number)?;
-    let (env_key, value) =
-        bump_taskfile_version(ctx.task_file, name, operation, prerelease, line_number)?;
-    ctx.env.bumped_versions.insert(name.to_string(), kind);
-    ctx.env.export(env_key, value);
-    Ok(())
-}
-
-fn ensure_not_bumped(effective_env: &RuntimeEnv, name: &str, line_number: usize) -> CjResult<()> {
-    if let Some(previous) = effective_env.bumped_versions.get(name) {
-        return Err(CjError::new(format!(
-            "line {line_number}: version '{name}' was already bumped as {} in this run",
-            previous.as_str()
-        )));
-    }
-    Ok(())
 }
 
 pub(crate) fn split_directive(directive: &str) -> (&str, &str) {
