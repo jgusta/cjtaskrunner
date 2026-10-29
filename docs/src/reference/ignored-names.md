@@ -1,6 +1,6 @@
 # Ignored names
 
-Some directives like [`@zip`](directives#zip) use an embedded and opinionated interal ignore list when compressing files. Here is the list:
+Some directives like [`@zip`](directives.md#zip) use an embedded and opinionated interal ignore list when compressing files. Here is the list:
 
 
 ```
