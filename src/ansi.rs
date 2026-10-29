@@ -9,6 +9,7 @@ pub(crate) enum Style {
     Directive,
     Description,
     SummaryDescription,
+    Version,
 }
 
 pub(crate) fn paint(value: impl fmt::Display, style: Style) -> String {
@@ -23,6 +24,7 @@ pub(crate) fn paint(value: impl fmt::Display, style: Style) -> String {
         Style::Directive => "36",
         Style::Description => "2",
         Style::SummaryDescription => "36",
+        Style::Version => "1;35",
     };
     format!("\x1b[{code}m{value}\x1b[0m")
 }

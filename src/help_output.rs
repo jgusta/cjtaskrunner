@@ -11,6 +11,7 @@ const DESCRIPTION_GAP: usize = 2;
 pub(crate) fn format_task_listing(parsed: &TaskFile, task_file: &Path) -> String {
     let mut lines = task_listing_lines(parsed, task_file);
     append_summary_help_legend(&mut lines, parsed);
+    append_version_footer(&mut lines);
     lines.join("\n")
 }
 
@@ -24,7 +25,16 @@ pub(crate) fn format_top_help(parsed: &TaskFile, task_file: &Path) -> String {
     }
     lines.extend(task_listing_lines(parsed, task_file));
     append_summary_help_legend(&mut lines, parsed);
+    append_version_footer(&mut lines);
     lines.join("\n")
+}
+
+fn append_version_footer(lines: &mut Vec<String>) {
+    lines.push(String::new());
+    lines.push(paint(
+        format!("CJTaskrunner {}", env!("CARGO_PKG_VERSION")),
+        Style::Version,
+    ));
 }
 
 pub(crate) fn format_task_help(

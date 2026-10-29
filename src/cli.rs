@@ -184,7 +184,10 @@ pub(crate) fn resolve_invocation_from(args: &[String], cwd: &Path) -> CjResult<I
 fn print_help() {
     println!(
         "{}\n\n{}\n  cj\n  cj --help\n  cj --version\n  cj --cli-help\n  cj --directives\n  cj --init\n  cj --auto\n  cj -e\n  cj --run <line>\n  cj --lsp\n  cj help [section]\n  cj <task> [arguments...]\n  cj <taskfile-or-directory> <task> [arguments...]\n  cj --format [taskfile-or-directory]\n  cj --completions <bash|zsh|fish>\n  cj --install-completions <bash|zsh|fish>\n\nNo task name lists tasks in the detected taskfile.\nUse --init to create a taskfile.\nUse --auto to import tasks from common project task systems.\nUse -e to open the detected taskfile in $EDITOR.\nUse --run to execute one task line without requiring a taskfile.\nUse cj help to show taskfile help.",
-        paint("CJTaskrunner", Style::Header),
+        paint(
+            format!("CJTaskrunner {}", env!("CARGO_PKG_VERSION")),
+            Style::Header
+        ),
         paint("Usage:", Style::Section),
     );
 }
