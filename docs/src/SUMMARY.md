@@ -16,6 +16,6 @@
 - [Variables Reference](reference/variables.md)
 
 # About
-- [CJTaskrunner is Not A Shell](manual/notashell.md)
+- [CJTaskrunner is Not A Shell](manual/not-a-shell.md)
 - [Philosophy](manual/philosophy.md)
 - [Comparisons](manual/comparisons.md)
