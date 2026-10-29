@@ -255,7 +255,7 @@ pub(super) fn unzip_path(base_dir: &Path, argv: &[String], line_number: usize) -
     let destination = destination_base.join(stem);
     let archive_file = fs::File::open(&archive_path)?;
     let mut archive = zip::ZipArchive::new(archive_file).map_err(zip_error)?;
-    let single_dir = if archive.len() > 0 {
+    let single_dir = if !archive.is_empty() {
         let first = archive.by_index(0).map_err(zip_error)?.name().to_string();
         let candidate = first.trim_end_matches('/').split('/').next().unwrap_or("");
         if !candidate.is_empty()
