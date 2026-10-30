@@ -739,7 +739,7 @@ fn collapse_line_continuations(source: &str) -> Vec<(usize, String)> {
         };
 
         if let Some((_, text)) = &mut pending {
-            text.push_str(segment.trim_start_matches(|ch| ch == ' ' || ch == '\t'));
+            text.push_str(segment.trim_start_matches([' ', '\t']));
             if !continues {
                 lines.push(pending.take().expect("pending continued line"));
             }
