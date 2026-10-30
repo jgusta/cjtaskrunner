@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -65,16 +65,47 @@ pub(crate) fn auto_import_tasks(cwd: &Path) -> CjResult<i32> {
 
     for group in groups {
         let mut block = String::new();
+        let mut nested_groups = Vec::<(String, Vec<(String, String)>)>::new();
+        let mut nested_group_names = HashMap::<String, String>::new();
         for task in group.tasks {
             if imported_commands.contains(&task.command) {
                 skipped += 1;
                 continue;
             }
-            let name = available_task_name(&task.base_name, &known, cwd);
+            let name = if let Some((source_group, child_name)) = task.base_name.split_once(':') {
+                let group_name = nested_group_names
+                    .entry(source_group.to_string())
+                    .or_insert_with(|| available_nested_group_name(source_group, &known, cwd))
+                    .clone();
+                let child_name = available_nested_child_name(&group_name, child_name, &known, cwd);
+                format!("{group_name}:{child_name}")
+            } else {
+                available_task_name(&task.base_name, &known, cwd)
+            };
             known.insert(name.clone());
             imported_commands.insert(task.command.clone());
-            block.push_str(&format!("{name}:\n  {}\n", task.command));
+            if let Some((group_name, task_name)) = name.split_once(':') {
+                let group_name = group_name.to_string();
+                let task_name = task_name.to_string();
+                known.insert(group_name.clone());
+                if let Some((_, children)) = nested_groups
+                    .iter_mut()
+                    .find(|(existing, _)| existing == &group_name)
+                {
+                    children.push((task_name, task.command));
+                } else {
+                    nested_groups.push((group_name, vec![(task_name, task.command)]));
+                }
+            } else {
+                block.push_str(&format!("{name}:\n  {}\n", task.command));
+            }
             added += 1;
+        }
+        for (group_name, tasks) in nested_groups {
+            block.push_str(&format!("{group_name}:\n"));
+            for (task_name, command) in tasks {
+                block.push_str(&format!("  {task_name}:\n    {command}\n"));
+            }
         }
         if !block.is_empty() {
             additions.push_str(&format!(
@@ -142,7 +173,7 @@ fn package_json_tasks(cwd: &Path) -> CjResult<Option<ImportGroup>> {
     let manager = package_manager(cwd, &root);
     let tasks = json_entries(&path, &root, "scripts")?
         .into_iter()
-        .filter_map(|name| imported_task(&name, &format!("{manager} run")))
+        .filter_map(|name| imported_npm_task(&name, &format!("{manager} run")))
         .collect();
     Ok(Some(ImportGroup {
         source: "package.json".to_string(),
@@ -301,6 +332,21 @@ fn imported_task(source_name: &str, command: &str) -> Option<ImportedTask> {
     })
 }
 
+fn imported_npm_task(source_name: &str, command: &str) -> Option<ImportedTask> {
+    let base_name = if source_name.matches(':').count() == 1 {
+        normalize_npm_task_name(source_name)?
+    } else {
+        normalize_task_name(source_name)?
+    };
+    validate_task_name(&base_name).ok()?;
+    let escaped = source_name.replace('$', "\\$");
+    let argument = shlex::try_quote(&escaped).ok()?.into_owned();
+    Some(ImportedTask {
+        base_name,
+        command: format!("{command} {argument}"),
+    })
+}
+
 fn normalize_task_name(source: &str) -> Option<String> {
     let mut normalized = String::new();
     for ch in source.chars() {
@@ -311,17 +357,72 @@ fn normalize_task_name(source: &str) -> Option<String> {
     (!normalized.is_empty()).then_some(normalized)
 }
 
+fn normalize_npm_task_name(source: &str) -> Option<String> {
+    let mut normalized = String::new();
+    for ch in source.chars() {
+        if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | ':') {
+            normalized.push(ch);
+        }
+    }
+    (!normalized.is_empty()).then_some(normalized)
+}
+
 fn available_task_name(base: &str, known: &HashSet<String>, cwd: &Path) -> String {
-    if !known.contains(base) && !cwd.join(base).is_dir() {
+    if !task_name_conflicts(base, known, cwd) {
         return base.to_string();
     }
     for suffix in 2usize.. {
         let candidate = format!("{base}{suffix}");
-        if !known.contains(&candidate) && !cwd.join(&candidate).is_dir() {
+        if !task_name_conflicts(&candidate, known, cwd) {
             return candidate;
         }
     }
     unreachable!("usize task suffixes are exhaustive")
+}
+
+fn available_nested_group_name(base: &str, known: &HashSet<String>, cwd: &Path) -> String {
+    if !nested_group_conflicts(base, known, cwd) {
+        return base.to_string();
+    }
+    for suffix in 2usize.. {
+        let candidate = format!("{base}{suffix}");
+        if !nested_group_conflicts(&candidate, known, cwd) {
+            return candidate;
+        }
+    }
+    unreachable!("usize task suffixes are exhaustive")
+}
+
+fn available_nested_child_name(
+    group: &str,
+    child: &str,
+    known: &HashSet<String>,
+    cwd: &Path,
+) -> String {
+    let base = format!("{group}:{child}");
+    if !known.contains(&base) && !cwd.join(&base).is_dir() {
+        return child.to_string();
+    }
+    for suffix in 2usize.. {
+        let candidate = format!("{child}{suffix}");
+        let full_name = format!("{group}:{candidate}");
+        if !known.contains(&full_name) && !cwd.join(&full_name).is_dir() {
+            return candidate;
+        }
+    }
+    unreachable!("usize task suffixes are exhaustive")
+}
+
+fn task_name_conflicts(name: &str, known: &HashSet<String>, cwd: &Path) -> bool {
+    known.contains(name)
+        || known
+            .iter()
+            .any(|existing| existing.starts_with(&format!("{name}:")))
+        || cwd.join(name).is_dir()
+}
+
+fn nested_group_conflicts(group: &str, known: &HashSet<String>, cwd: &Path) -> bool {
+    task_name_conflicts(group, known, cwd)
 }
 
 fn read_source(path: &Path) -> CjResult<String> {

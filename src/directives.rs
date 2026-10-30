@@ -14,6 +14,7 @@ mod await_directive;
 mod conditions;
 mod filesystem;
 mod if_directive;
+mod regex_replace;
 mod switch_directive;
 mod values;
 mod version_bump;
@@ -24,6 +25,7 @@ pub(crate) use conditions::if_condition_error;
 pub(crate) use conditions::if_in_condition_error;
 use filesystem::{copy_dirs, copy_files, remove_path, rename_path, unzip_path, zip_paths};
 use if_directive::execute_if_directive;
+use regex_replace::execute_regex_replace_directive;
 use switch_directive::execute_switch_directive;
 pub(crate) use values::parse_variable_name_token;
 use values::{
@@ -190,6 +192,11 @@ pub(crate) fn execute_directive(
         "rename" => {
             let argv = interpolate_argv(args, &ctx.env.vars)?;
             rename_path(ctx.cwd.current(), &argv, lines[*index].line_number)?;
+            *index += 1;
+            Ok(0)
+        }
+        "regex-replace" => {
+            execute_regex_replace_directive(ctx, args, lines[*index].line_number)?;
             *index += 1;
             Ok(0)
         }

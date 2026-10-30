@@ -200,9 +200,10 @@ impl<'a> TaskFileParser<'a> {
     }
 
     fn parse_unvalidated(mut self, source: &str) -> CjResult<TaskFile> {
-        reject_mixed_indentation_styles(source, self.path)?;
-        for (index, raw_line) in source.lines().enumerate() {
-            self.parse_line(SourceLine::new(index + 1, raw_line))?;
+        let lines = collapse_line_continuations(source);
+        reject_mixed_indentation_styles(&lines, self.path)?;
+        for (line_number, raw_line) in &lines {
+            self.parse_line(SourceLine::new(*line_number, raw_line))?;
         }
         self.finish()
     }
@@ -722,25 +723,57 @@ fn is_help_directive(text: &str) -> bool {
 }
 
 // enforce an extreme bias towards spaces.
-fn reject_mixed_indentation_styles(source: &str, path: &Path) -> CjResult<()> {
+fn collapse_line_continuations(source: &str) -> Vec<(usize, String)> {
+    let mut lines = Vec::new();
+    let mut pending: Option<(usize, String)> = None;
+
+    for (index, physical_line) in source.split_inclusive('\n').enumerate() {
+        let has_newline = physical_line.ends_with('\n');
+        let line = physical_line.strip_suffix('\n').unwrap_or(physical_line);
+        let line = line.strip_suffix('\r').unwrap_or(line);
+        let continues = has_newline && line.ends_with('\\');
+        let segment = if continues {
+            &line[..line.len() - 1]
+        } else {
+            line
+        };
+
+        if let Some((_, text)) = &mut pending {
+            text.push_str(segment.trim_start_matches(|ch| ch == ' ' || ch == '\t'));
+            if !continues {
+                lines.push(pending.take().expect("pending continued line"));
+            }
+        } else if continues {
+            pending = Some((index + 1, segment.to_string()));
+        } else {
+            lines.push((index + 1, segment.to_string()));
+        }
+    }
+
+    if let Some(line) = pending {
+        lines.push(line);
+    }
+
+    lines
+}
+
+fn reject_mixed_indentation_styles(lines: &[(usize, String)], path: &Path) -> CjResult<()> {
     let mut space_indent_line = None;
     let mut tab_indent_line = None;
 
-    for (index, raw_line) in source.lines().enumerate() {
-        let line_number = index + 1;
-        let line = raw_line.strip_suffix('\r').unwrap_or(raw_line);
+    for (line_number, line) in lines {
         let indent = leading_indent(line);
         if indent.has_spaces {
-            space_indent_line.get_or_insert(line_number);
+            space_indent_line.get_or_insert(*line_number);
         }
         if indent.has_tabs {
-            tab_indent_line.get_or_insert(line_number);
+            tab_indent_line.get_or_insert(*line_number);
         }
         if indent.has_spaces && indent.has_tabs {
-            return Err(mixed_indentation_error(path, line_number));
+            return Err(mixed_indentation_error(path, *line_number));
         }
         if space_indent_line.is_some() && tab_indent_line.is_some() {
-            return Err(mixed_indentation_error(path, line_number));
+            return Err(mixed_indentation_error(path, *line_number));
         }
     }
 

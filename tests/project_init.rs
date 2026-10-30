@@ -67,7 +67,7 @@ fn auto_imports_common_task_systems_and_is_idempotent() {
     assert!(source.starts_with("# Imported from package.json by cj --auto\n"));
     for expected in [
         "build:\n  pnpm run build",
-        "lintfix:\n  pnpm run lint:fix",
+        "lint:\n  fix:\n    pnpm run lint:fix",
         "build2:\n  deno task build",
         "build3:\n  make build",
         "release:\n  make release",

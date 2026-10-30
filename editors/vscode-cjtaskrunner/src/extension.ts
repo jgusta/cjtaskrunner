@@ -227,7 +227,7 @@ class CjTaskProvider implements vscode.TreeDataProvider<TreeEntry> {
 
   getTreeItem(entry: TreeEntry): vscode.TreeItem {
     if (entry.kind === "file") {
-      const item = new vscode.TreeItem(fileLabel(entry.file), vscode.TreeItemCollapsibleState.Expanded);
+      const item = new vscode.TreeItem(fileLabel(entry.file), vscode.TreeItemCollapsibleState.Collapsed);
       item.resourceUri = entry.file.uri;
       item.description = entry.file.tasks.length === 1 ? "1 task" : `${entry.file.tasks.length} tasks`;
       item.contextValue = "cjtaskrunner.taskfile";
@@ -239,7 +239,7 @@ class CjTaskProvider implements vscode.TreeDataProvider<TreeEntry> {
       const visibleTasks = layerTasks(entry.file, entry.layer);
       const item = new vscode.TreeItem(
         path.basename(entry.layer.uri.fsPath),
-        vscode.TreeItemCollapsibleState.Expanded
+        vscode.TreeItemCollapsibleState.Collapsed
       );
       item.resourceUri = entry.layer.uri;
       item.description = visibleTasks.length === 1 ? "1 task" : `${visibleTasks.length} tasks`;
@@ -251,7 +251,7 @@ class CjTaskProvider implements vscode.TreeDataProvider<TreeEntry> {
     const item = new vscode.TreeItem(
       taskTreeLabel(entry.task),
       hasChildTasks(entry.tasks, entry.task.name)
-        ? vscode.TreeItemCollapsibleState.Expanded
+        ? vscode.TreeItemCollapsibleState.Collapsed
         : vscode.TreeItemCollapsibleState.None
     );
     const runnable = isRunnableTask(entry.task);

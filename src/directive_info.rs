@@ -99,6 +99,11 @@ directives!(
         "Rename a file or directory without moving it.",
         Exactly(2)
     ),
+    (
+        "regex-replace",
+        "Replace all regex matches in a text file in place.",
+        Exactly(3)
+    ),
     ("stop", "Write optional text, then stop with status 1.", Any),
     (
         "set",

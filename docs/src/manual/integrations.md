@@ -6,6 +6,8 @@
 
 `package.json` scripts are considered first, followed by Deno, Make, and Just tasks. Each wrapper takes the shortest available normalized name. Name or directory conflicts add a number without a separator: `build`, `build2`, `build3`. Existing CJ tasks are never overwritten. This command is **not** idempotent; you probably don't want to run it more than once as it will create new tasks each time it runs.
 
+For `package.json` scripts, a single colon in a script name creates a nested task. For example, `build:site` becomes `build:site` under a `build` group. Script names with more than one colon stay flat and have their colons removed from the imported task name.
+
 See [CLI Reference](../reference/cli.md).
 
 ## Python virtual environments

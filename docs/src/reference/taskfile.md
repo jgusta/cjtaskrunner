@@ -175,6 +175,19 @@ run:
     cargo build --release
 ```
 
+A taskfile line ending in `\` immediately before a line break continues on the
+next physical line. The next line's leading spaces and tabs are removed before
+the lines are joined. Continuations can span multiple lines:
+
+```cjtasks
+announce:
+  @echo This message is continued \
+      onto the next line
+```
+
+This produces one task expression: `@echo This message is continued onto the
+next line`.
+
 `@if` accepts a truthy value, `==`, and `!=` string comparisons. Use `@if-in`
 or `@if-not-in` for exact case-sensitive list membership:
 
@@ -203,7 +216,7 @@ This executes as:
 ["cargo", "build", "--release"]
 ```
 
-Ordinary commands do not interpret shell syntax:
+CJTaskrunner is [not a shell](../manual/not-a-shell.md). Ordinary commands do not interpret shell syntax:
 
 - pipes
 - redirects
@@ -212,9 +225,9 @@ Ordinary commands do not interpret shell syntax:
 - shell builtins
 - `~` home-directory expansion
 - `NAME=value command` environment prefixes
-- backslash line continuations
 
-Use `@shell` for shell behavior.
+Use `@shell` for other shell behavior. Backslash line continuation is handled
+by the taskfile parser before ordinary commands are executed.
 
 For command-specific environment variables, prefer exported task variables:
 

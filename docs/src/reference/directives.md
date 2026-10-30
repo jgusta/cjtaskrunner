@@ -81,6 +81,7 @@ Directive lines
 - [`@zip`](#zip) - create a zip archive.
 - [`@unzip`](#unzip) - extract a zip archive.
 - [`@rename`](#rename) - rename a file or directory.
+- [`@regex-replace`](#regex-replace) - replace text matching a regular expression.
 
 ### Documentation Metadata
 
@@ -820,6 +821,25 @@ package:
 `@rename source destination` renames one file or directory. Source and
 destination must be in the same directory; use copy directives when moving
 between directories.
+
+<a id="regex-replace"></a>
+
+### `@regex-replace`
+
+```cjtasks
+dates:
+  @regex-replace dates.txt '(\d{4})-(\d{2})-(\d{2})' '{2}/{3}/{1}'
+```
+
+`@regex-replace FILENAME FIND REPLACE` reads a UTF-8 text file, replaces every
+non-overlapping match of `FIND` with `REPLACE`, and writes the result back to
+the same file. Quote patterns and replacements that contain spaces so each is
+passed as one argument. Use `{1}`, `{2}`, and so on for numbered capture
+references; `{0}` refers to the full match. Braces mark the end of each group
+number, so `{1}0` means capture group 1 followed by a literal `0`. Write `\{`
+to output a literal `{`. The `$1` form also works. The pattern supports
+look-around and backreferences. Invalid patterns, matching errors, and file
+read or write errors fail the directive.
 
 ## Documentation Metadata
 
