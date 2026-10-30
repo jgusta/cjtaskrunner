@@ -2,7 +2,7 @@
   "name": "cjtaskrunner-vscode",
   "displayName": "CJTaskrunner",
   "description": "Taskfile language support and task runner view for CJTaskrunner.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "jgusta-dev",
   "private": false,
   "license": "MIT",

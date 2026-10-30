@@ -4,6 +4,7 @@ const os = require("os");
 const path = require("path");
 const {
   executableResolutionError,
+  languageServerEnvironment,
   renderLanguageServerStatus,
   resolveExecutablePath
 } = require("../out/languageServerSupport");
@@ -69,6 +70,21 @@ assert.match(status, /Command: .*target[/\\]debug[/\\]cj --lsp/);
 assert.match(status, /Trace: messages/);
 assert.match(status, /Outline: Language server with extension fallback/);
 
+assert.deepStrictEqual(
+  languageServerEnvironment({
+    PATH: "/usr/bin:/bin",
+    HOME: "/Users/example",
+    XDG_BIN_HOME: "/Users/example/tools/bin",
+    OTHER: "preserved"
+  }, "darwin"),
+  {
+    PATH: "/Users/example/tools/bin:/Users/example/.local/bin:/usr/bin:/bin",
+    HOME: "/Users/example",
+    XDG_BIN_HOME: "/Users/example/tools/bin",
+    OTHER: "preserved"
+  }
+);
+
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cjtaskrunner-lsp-path-"));
 const executableName = process.platform === "win32" ? "cj.exe" : "cj";
 const executablePath = path.join(tempDir, executableName);
@@ -90,7 +106,7 @@ assert.strictEqual(
   undefined
 );
 
-assert.match(
+assert.strictEqual(
   executableResolutionError(
     resolveExecutablePath({
       configuredPath: "",
@@ -100,7 +116,7 @@ assert.match(
     { PATH: "" },
     process.platform
   ),
-  /Could not find cj on PATH/
+  undefined
 );
 
 assert.match(

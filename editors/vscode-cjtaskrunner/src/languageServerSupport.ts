@@ -15,6 +15,23 @@ export type ResolveExecutablePathOptions = {
   workspaceRoot?: string;
 };
 
+export function languageServerEnvironment(
+  env: NodeJS.ProcessEnv = process.env,
+  platform = process.platform
+): NodeJS.ProcessEnv {
+  const pathKey = Object.keys(env).find((key) => key.toLowerCase() === "path") ?? "PATH";
+  const separator = platform === "win32" ? ";" : path.delimiter;
+  const inheritedPath = env[pathKey] ?? "";
+  const userBinDirs = [env.XDG_BIN_HOME, env.HOME ? path.join(env.HOME, ".local", "bin") : undefined]
+    .filter((dir): dir is string => Boolean(dir));
+  const paths = [...new Set([...userBinDirs, ...inheritedPath.split(separator)].filter(Boolean))];
+
+  return {
+    ...env,
+    [pathKey]: paths.join(separator)
+  };
+}
+
 export type LanguageServerStatus = {
   clientState: string;
   executable: ExecutableResolution;
@@ -64,37 +81,10 @@ export function executableResolutionError(
     return `Configured cjtaskrunner.path is not executable: ${executable.displayPath}`;
   }
 
-  if (findOnPath(executable.command, env.PATH ?? "", platform)) {
-    return undefined;
-  }
-
-  return `Could not find ${executable.displayPath} on PATH. Install CJTaskrunner or set cjtaskrunner.path to the cj executable.`;
-}
-
-function findOnPath(command: string, pathValue: string, platform: string): boolean {
-  if (command.includes(path.sep) || (path.sep === "\\" && command.includes("/"))) {
-    return isExecutableFile(command, platform);
-  }
-
-  const extensions = executableExtensions(command, platform);
-  for (const directory of pathValue.split(path.delimiter)) {
-    if (!directory) {
-      continue;
-    }
-    for (const extension of extensions) {
-      if (isExecutableFile(path.join(directory, `${command}${extension}`), platform)) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-function executableExtensions(command: string, platform: string): string[] {
-  if (platform !== "win32" || path.extname(command)) {
-    return [""];
-  }
-  return [".exe", ".cmd", ".bat", ""];
+  // PATH can differ between the extension host and VS Code's integrated
+  // terminal. Let the language client attempt to spawn the bare command and
+  // report a startup error only if that actual launch fails.
+  return undefined;
 }
 
 function isExecutableFile(candidate: string, platform: string): boolean {

@@ -9,6 +9,7 @@ import {
 import {
   ExecutableResolution,
   executableResolutionError,
+  languageServerEnvironment,
   LanguageServerLifecycleState,
   renderLanguageServerStatus
 } from "./languageServerSupport";
@@ -165,7 +166,8 @@ export class CjLanguageServerManager implements vscode.Disposable {
   private createClient(executable: ExecutableResolution): LanguageClient {
     const serverOptions: ServerOptions = {
       command: executable.command,
-      args: ["--lsp"]
+      args: ["--lsp"],
+      options: { env: languageServerEnvironment() }
     };
     const clientOptions: LanguageClientOptions = {
       documentSelector: DOCUMENT_SELECTOR,
