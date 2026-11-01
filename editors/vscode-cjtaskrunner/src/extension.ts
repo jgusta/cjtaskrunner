@@ -509,11 +509,14 @@ function taskIconPath(
     return new vscode.ThemeIcon("book", new vscode.ThemeColor("descriptionForeground"));
   }
   if (task.arguments.length > 0) {
-    return new vscode.ThemeIcon("symbol-parameter", new vscode.ThemeColor("charts.yellow"));
+    return {
+      light: vscode.Uri.joinPath(extensionUri, "images", "cjargtaskicon-light.svg"),
+      dark: vscode.Uri.joinPath(extensionUri, "images", "cjargtaskicon-dark.svg")
+    };
   }
   return {
-    light: vscode.Uri.joinPath(extensionUri, "images", "cdjtaskicon-light.png"),
-    dark: vscode.Uri.joinPath(extensionUri, "images", "cdjtaskicon-dark.png")
+    light: vscode.Uri.joinPath(extensionUri, "images", "cjtaskicon-light.png"),
+    dark: vscode.Uri.joinPath(extensionUri, "images", "cjtaskicon-dark.png")
   };
 }
 

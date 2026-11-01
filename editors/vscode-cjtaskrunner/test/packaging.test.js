@@ -12,8 +12,10 @@ const canonicalLogoPath = path.join(root, "logo", "cj-logo-color-d.svg");
 const panelIcons = [
   "images/cjdocicon-light.png",
   "images/cjdocicon-dark.png",
-  "images/cdjtaskicon-light.png",
-  "images/cdjtaskicon-dark.png"
+  "images/cjtaskicon-light.png",
+  "images/cjtaskicon-dark.png",
+  "images/cjargtaskicon-light.svg",
+  "images/cjargtaskicon-dark.svg"
 ];
 const tasksView = packageJson.contributes?.views?.explorer?.find(
   (view) => view.id === "cjtaskrunner.tasks"
