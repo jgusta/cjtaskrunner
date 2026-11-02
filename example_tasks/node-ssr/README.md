@@ -1,7 +1,7 @@
 # Node SSR Example
 
-This tiny server-side rendered Node app demonstrates captured `@set` blocks,
-task arguments, `@switch`, filesystem directives, `@open`, and taskfile
+This tiny server-side rendered Node app demonstrates captured [`@set`](../../docs/src/reference/directives.md#set) blocks,
+task arguments, [`@switch`](../../docs/src/reference/directives.md#switch), filesystem directives, [`@open`](../../docs/src/reference/directives.md#open), and taskfile
 versions.
 
 ## Tasks
@@ -28,4 +28,4 @@ cj version
 ```
 
 `start` is long-running. `release` intentionally edits this example's
-`@version site` value.
+[`@version site`](../../docs/src/reference/directives.md#version) value.

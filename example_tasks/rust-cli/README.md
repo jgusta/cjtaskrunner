@@ -1,6 +1,6 @@
 # Rust CLI Example
 
-This tiny Rust project demonstrates task arguments, `@switch`, parallel CI,
+This tiny Rust project demonstrates task arguments, [`@switch`](../../docs/src/reference/directives.md#switch), parallel CI,
 version conditionals, exported app environment, and guarded version bump usage.
 
 ## Tasks
@@ -24,4 +24,4 @@ cj version
 cj release patch
 ```
 
-`release` intentionally edits this example's `@version app` value.
+`release` intentionally edits this example's [`@version app`](../../docs/src/reference/directives.md#version) value.

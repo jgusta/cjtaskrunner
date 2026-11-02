@@ -106,7 +106,7 @@ Tasks in cjtasks:
    dev
 ```
 
-Annotate your tasks with the `@desc` directive:
+Annotate your tasks with the [`@desc`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#desc) directive:
 ```cjtasks
 build:
   @desc build for release using npm
@@ -145,12 +145,12 @@ format, directive reference, and editor setup.
 - Indented lines are commands that run like your shell would (though [CJTaskrunner is not a shell](https://jgusta.github.io/cjtaskrunner/reference/directives.html#shell))
 
 All other lines are fully optional directives. These are flat with only user-supplied names or paths: 
-- Control task flow with `@if`, `@else`, `@switch`,  `@stop`, `@success`, `@fail`, `@and`, `@or`
-- Manipulate environment variables with `@set`, `@env:`, `@export` and interpolate them in commands
-- Navigate the file system using `@cd`, `@back`, `@mkdir`, `@cp`, `@rename`, `@clean`
+- Control task flow with [`@if`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#if), [`@else`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#else), [`@switch`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#switch), [`@stop`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#stop), [`@success`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#success), [`@fail`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#fail), [`@and`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#and), [`@or`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#or)
+- Manipulate environment variables with [`@set`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#set), [`@env:`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#env), [`@export`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#export) and interpolate them in commands
+- Navigate the file system using [`@cd`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#cd), [`@back`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#back), [`@mkdir`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#mkdir), [`@cp`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#cp), [`@rename`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#rename), [`@clean`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#clean)
 
 ### CJTaskrunner is built for modern workflows:
-- **Asynchronous task execution** with `@await`
+- **Asynchronous task execution** with [`@await`](https://jgusta.github.io/cjtaskrunner/reference/directives.html#await)
 - Tasks are discoverable and **self-documenting** from the command line
 - Tasks are **composable** and isolated
 - Strings are plain text; use quotes only when the command being run needs them

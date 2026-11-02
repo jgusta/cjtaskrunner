@@ -31,7 +31,7 @@ Tasks in /Users/me/my-project/cjtasks:
   hello
 ```
 
-Adding `@desc` to a task displays a short description in the summary:
+Adding [`@desc`](directives.md#desc) to a task displays a short description in the summary:
 
 In the `cjtasks` file:
 ```cjtasks
@@ -57,17 +57,17 @@ they will not be seen by a shell. So you cannot have a task for example `ls *`
 because the `*` is a `bash` token that expands to a list of file names before
 being sent to `ls`.
 
-However, if you do need to use shell-specific features, you can use the `@shell` directive. This should be avoided whenever possible as it couples your taskfiles to your shell. Instead we recommend either putting your shell-specific commands into a shell script, or if your needs are simple enough, use CJTaskrunner directives.
+However, if you do need to use shell-specific features, you can use the [`@shell`](directives.md#shell) directive. This should be avoided whenever possible as it couples your taskfiles to your shell. Instead we recommend either putting your shell-specific commands into a shell script, or if your needs are simple enough, use CJTaskrunner directives.
 
 CJTaskrunner uses a small domain-specific language, so taskfiles require no
-language runtime unless you use `@shell` in which case it depends on the operating system shell.
+language runtime unless you use [`@shell`](directives.md#shell) in which case it depends on the operating system shell.
 
 The language is line-based and indentation-sensitive. The official format uses
 two spaces per indentation level. The parser also accepts one leading tab per
 level when the whole file uses tabs consistently. Indented lines beneath a
 header form a block. Task definitions may nest one level.
 
-Top-level entries are task definitions, `@help:`, `@env:`, or `@version`
+Top-level entries are task definitions, [`@help:`](directives.md#help), [`@env:`](directives.md#env), or [`@version`](directives.md#version)
 headers.
 
 Blank lines are ignored. Comment-only lines start with optional indentation
@@ -107,7 +107,7 @@ same number of arguments. Tasks not replaced by a higher layer remain available,
 and cross-layer task references are valid.
 
 The bottom file must be named `cjtasks` and is the base layer if it exists. This
-is the only layer that can hold `@version` directives, and any version related
+is the only layer that can hold [`@version`](directives.md#version) directives, and any version related
 directives use the `@version` from the base layer.
 
 You can overwrite a parent task alone and it will still inherit subtasks. You
@@ -117,7 +117,7 @@ in the future.
 
 Environment entries replace lower entries by name. Optionality (`:` or `?:`) is overwritten as well.
 
-The highest-precedence `@help:` block wins.
+The highest-precedence [`@help:`](directives.md#help) block wins.
 
 ## Tasks
 
@@ -160,7 +160,7 @@ their `@` prefix.
 Task names must not match a directory in the selected taskfile's directory.
 
 Task lines are non-empty indented lines under a task. They run in order.
-Execution stops on first non-zero status unless a *same-level* `@or` handles it.
+Execution stops on first non-zero status unless a *same-level* [`@or`](directives.md#or) handles it.
 
 Execution stops with an error after 100,000 task steps as possible infinite-loop protection.
 
@@ -188,8 +188,8 @@ announce:
 This produces one task expression: `@echo This message is continued onto the
 next line`.
 
-`@if` accepts a truthy value, `==`, and `!=` string comparisons. Use `@if-in`
-or `@if-not-in` for exact case-sensitive list membership:
+[`@if`](directives.md#if) accepts a truthy value, `==`, and `!=` string comparisons. Use [`@if-in`](directives.md#if-in)
+or [`@if-not-in`](directives.md#if-not-in) for exact case-sensitive list membership:
 
 ```cjtasks
 compile (TARGET):
@@ -226,7 +226,7 @@ CJTaskrunner is [not a shell](../manual/not-a-shell.md). Ordinary commands do no
 - `~` home-directory expansion
 - `NAME=value command` environment prefixes
 
-Use `@shell` for other shell behavior. Backslash line continuation is handled
+Use [`@shell`](directives.md#shell) for other shell behavior. Backslash line continuation is handled
 by the taskfile parser before ordinary commands are executed.
 
 For command-specific environment variables, prefer exported task variables:
@@ -243,7 +243,7 @@ electron-install:
   npm install
 ```
 
-Or keep the shell syntax on a single `@shell` line:
+Or keep the shell syntax on a single [`@shell`](directives.md#shell) line:
 
 ```cjtasks
 electron-install:
@@ -253,7 +253,7 @@ electron-install:
 ```
 
 Child stdin, stdout, and stderr are inherited unless a command is being captured
-by `@set NAME:`.
+by [`@set NAME:`](directives.md#set).
 
 ## Word Splitting
 
@@ -269,7 +269,7 @@ This is not a full shell parser.
 
 ## Interpolation
 
-Interpolation applies to ordinary command argv tokens, `@shell` text, and directive arguments.
+Interpolation applies to ordinary command argv tokens, [`@shell`](directives.md#shell) text, and directive arguments.
 
 Supported forms:
 
@@ -288,10 +288,10 @@ Rules:
 - `${NAME?}` reads the current variable value or an empty string when absent.
 - `${NAME?fallback}` and `${NAME?"fallback value"}` use the fallback when `NAME` is absent.
 - `\$NAME` and `\${NAME}` escape interpolation.
-- Variable references are invalid in `@desc` text and every line of an `@help:` block. Escape the dollar sign to include literal variable-shaped text there; the escape is not displayed.
+- Variable references are invalid in [`@desc`](directives.md#desc) text and every line of an [`@help:`](directives.md#help) block. Escape the dollar sign to include literal variable-shaped text there; the escape is not displayed.
 - Directive operands are interpolated as strings before validation, including operands that name variables.
 - In ordinary commands, an interpolated value remains one argv value.
-- In `@shell`, interpolated values are shell-quoted before `/bin/sh -c`.
+- In [`@shell`](directives.md#shell), interpolated values are shell-quoted before `/bin/sh -c`.
 
 CJTaskrunner does not support shell-style command substitution, arithmetic
 expansion, pattern replacement, or nested expansion.

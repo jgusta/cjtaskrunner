@@ -8,8 +8,8 @@ and browser opening.
 
 - `check`: prints environment values and awaits file validation.
 - `mode ($MODE)`: accepts `local`, `staging`, or `production`, then exports `VITE_MODE`.
-- `dev`: simulates client/server startup with `@await` and opens the dev URL.
-- `browser`: builds a runtime URL with `@set` and opens it.
+- `dev`: simulates client/server startup with [`@await`](../../docs/src/reference/directives.md#await) and opens the dev URL.
+- `browser`: builds a runtime URL with [`@set`](../../docs/src/reference/directives.md#set) and opens it.
 - `build ($MODE)`: validates files, selects a mode, and runs `npm run build`.
 - `preview`: builds production assets and starts Vite preview.
 

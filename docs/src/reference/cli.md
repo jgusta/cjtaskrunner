@@ -90,7 +90,7 @@ This rule eliminates ambiguity. If you try to run a CJTaskrunner task from a con
 Passing an existing directory or recognized taskfile by itself also lists that location's visible tasks.
 
 
-`cj --run <line>` executes one task line in the current directory without requiring a taskfile. The line must not contain newlines, task labels, or block directives such as `@if`, `@switch`, `@and`, `@or`, `@help:`, or `@set NAME:`.
+`cj --run <line>` executes one task line in the current directory without requiring a taskfile. The line must not contain newlines, task labels, or block directives such as [`@if`](directives.md#if), [`@switch`](directives.md#switch), [`@and`](directives.md#and), [`@or`](directives.md#or), [`@help:`](directives.md#help), or [`@set NAME:`](directives.md#set).
 
 ## Creating Taskfiles
 

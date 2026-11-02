@@ -18,9 +18,9 @@ You cannot use shell-specific syntax in your task definitions in your `cjtasks` 
 
 CJTaskrunner can do some of these things using directives, however.
 
-- Use `@export` to change an enviroment variable before running a command
+- Use [`@export`](../reference/directives.md#export) to change an enviroment variable before running a command
 
-- Capture the stdout of a command using `@set:`
+- Capture the stdout of a command using [`@set:`](../reference/directives.md#set)
 
 The irony of the statement at the top of this page is that, like a shell, CJTaskrunner runs executables directly, supplying arguments. So you can always use `env` in your task if you really need to do the inline syntax:
 
@@ -31,5 +31,5 @@ mytask:
 
 CJTaskrunner can run any commands that are discrete executables. Much of what you might think of as `bash` syntax may actually be a program.
 
-And finally if you REALLY need to, you can use `@shell` to run things in your system shell. This will void your CJTaskrunner warranty however.
+And finally if you REALLY need to, you can use [`@shell`](../reference/directives.md#shell) to run things in your system shell. This will void your CJTaskrunner warranty however.
 

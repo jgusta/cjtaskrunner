@@ -14,12 +14,12 @@ cj check
 
 - Task arguments such as `run ($MODE)` and `build ($PROFILE)`.
 - Hidden helper tasks beginning with `_`.
-- Runtime variables with `@set`, captured output with `@set:`, `@export`, and `@unset`.
-- Conditional blocks with `@if`, `@if-not`, `@if-in`, `@if-not-in`,
-  `@if-exists`, `@if-not-exists`, `@if-version`, and `@switch`.
-- Parallel branches with `@await` plus `@or` failure handling.
-- Browser opening with `@open`.
-- File operations with `@clean`, `@mkdir`, `@cp`, and `@cpdir`.
+- Runtime variables with [`@set`](../docs/src/reference/directives.md#set), captured output with [`@set:`](../docs/src/reference/directives.md#set), [`@export`](../docs/src/reference/directives.md#export), and [`@unset`](../docs/src/reference/directives.md#unset).
+- Conditional blocks with [`@if`](../docs/src/reference/directives.md#if), [`@if-not`](../docs/src/reference/directives.md#if-not), [`@if-in`](../docs/src/reference/directives.md#if-in), [`@if-not-in`](../docs/src/reference/directives.md#if-not-in),
+  [`@if-exists`](../docs/src/reference/directives.md#if-exists), [`@if-not-exists`](../docs/src/reference/directives.md#if-not-exists), [`@if-version`](../docs/src/reference/directives.md#if-version), and [`@switch`](../docs/src/reference/directives.md#switch).
+- Parallel branches with [`@await`](../docs/src/reference/directives.md#await) plus [`@or`](../docs/src/reference/directives.md#or) failure handling.
+- Browser opening with [`@open`](../docs/src/reference/directives.md#open).
+- File operations with [`@clean`](../docs/src/reference/directives.md#clean), [`@mkdir`](../docs/src/reference/directives.md#mkdir), [`@cp`](../docs/src/reference/directives.md#cp), and [`@cpdir`](../docs/src/reference/directives.md#cpdir).
 - Version headers and guarded version bump flows.
 
 ## Examples
