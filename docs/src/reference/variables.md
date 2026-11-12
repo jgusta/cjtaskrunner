@@ -47,7 +47,8 @@ CJTaskrunner runs in an **isolated snapshot** of your **[environment](definition
 - If you set a variable using an existing variable name in your taskfile, that new value will take precedence for the duration of the [task context](definitions.md#task-context).
 - The overridden [environment variable](definitions.md#environment-variable) will be restored after the [task context](definitions.md#task-context) ends unless exported.
 - Variables that are exported will propagate to other tasks within the same **[taskfile execution context](definitions.md#taskfile-execution-context)**, for example when tasks call other tasks. These propagate back to a calling task as well.
-- [Exported variables](definitions.md#exported-variable) work essentially the same way as [environment variables](definitions.md#environment-variable). In case of a conflict, [exported variables](definitions.md#exported-variable) take precedence.
+- [`@env:`](directives.md#env) establishes the initial environment for the taskfile execution context. [`@export`](directives.md#export) adds or replaces values in the shared environment passed to child processes. If both assign the same name, the later [`@export`](directives.md#export) assignment wins.
+- A local [`@set`](directives.md#set) can shadow an exported or environment value for interpolation within its task. That shadow does not change the value passed to child processes unless the value is explicitly exported.
 
 
 ## Interpolation

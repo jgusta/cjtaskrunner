@@ -209,6 +209,9 @@ impl<'a> TaskFileParser<'a> {
     }
 
     fn parse_line(&mut self, line: SourceLine<'_>) -> CjResult<()> {
+        if line.trimmed.starts_with("@pragma from ") {
+            return Ok(());
+        }
         if self.capture_help_line(line)? {
             return Ok(());
         }
@@ -269,7 +272,10 @@ impl<'a> TaskFileParser<'a> {
     }
 
     fn classify_line<'b>(&self, line: SourceLine<'b>) -> CjResult<Option<LineEntry<'b>>> {
-        if line.trimmed.is_empty() || line.trimmed.starts_with('#') {
+        if line.trimmed.is_empty()
+            || line.trimmed.starts_with('#')
+            || line.trimmed.starts_with("@pragma from ")
+        {
             return Ok(None);
         }
         if !line.is_indented() {

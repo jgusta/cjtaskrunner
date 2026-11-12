@@ -35,6 +35,10 @@
     "comments": {
       "patterns": [
         {
+          "name": "comment.block.pragma.cjtasks",
+          "match": "^\\s*@pragma.*$"
+        },
+        {
           "name": "comment.line.number-sign.cjtasks",
           "match": "(?:^\\s*|\\G)#.*$"
         }

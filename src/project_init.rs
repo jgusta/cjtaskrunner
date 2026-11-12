@@ -18,6 +18,9 @@ struct ImportGroup {
 struct ImportedTask {
     base_name: String,
     command: String,
+    provenance: String,
+    description: Option<String>,
+    help: Option<String>,
 }
 
 pub(crate) fn init_taskfile(cwd: &Path) -> CjResult<i32> {
@@ -53,6 +56,7 @@ pub(crate) fn auto_import_tasks(cwd: &Path) -> CjResult<i32> {
     };
     let parsed = parse_task_file(&source, &path)?;
     let mut known = parsed.task_order.iter().cloned().collect::<HashSet<_>>();
+    let imported_sources = read_imported_sources(&source);
     let mut imported_commands = parsed
         .tasks
         .values()
@@ -68,7 +72,9 @@ pub(crate) fn auto_import_tasks(cwd: &Path) -> CjResult<i32> {
         let mut nested_groups = Vec::<(String, Vec<(String, String)>)>::new();
         let mut nested_group_names = HashMap::<String, String>::new();
         for task in group.tasks {
-            if imported_commands.contains(&task.command) {
+            if imported_commands.contains(&task.command)
+                || imported_sources.contains(&format!("{}:{}", group.source, task.provenance))
+            {
                 skipped += 1;
                 continue;
             }
@@ -97,7 +103,17 @@ pub(crate) fn auto_import_tasks(cwd: &Path) -> CjResult<i32> {
                     nested_groups.push((group_name, vec![(task_name, task.command)]));
                 }
             } else {
-                block.push_str(&format!("{name}:\n  {}\n", task.command));
+                block.push_str(&format!(
+                    "{name}:\n  @pragma from {}:{}\n",
+                    group.source, task.provenance
+                ));
+                if let Some(description) = &task.description {
+                    block.push_str(&format!("  @desc {description}\n"));
+                }
+                if let Some(help) = &task.help {
+                    block.push_str(&format!("  @help:\n    {help}\n"));
+                }
+                block.push_str(&format!("  {}\n", task.command));
             }
             added += 1;
         }
@@ -171,9 +187,40 @@ fn package_json_tasks(cwd: &Path) -> CjResult<Option<ImportGroup>> {
     }
     let root = read_json_object(&path)?;
     let manager = package_manager(cwd, &root);
+    let scripts = root.get("scripts").and_then(Value::as_object);
     let tasks = json_entries(&path, &root, "scripts")?
         .into_iter()
-        .filter_map(|name| imported_npm_task(&name, &format!("{manager} run")))
+        .filter_map(|name| {
+            let command_text = scripts?.get(&name)?.as_str()?;
+            let mut task = imported_npm_task(&name, &format!("{manager} run"))?;
+            task.provenance = format!("scripts.{name}");
+            if let Some(calls) = npm_script_calls(command_text, scripts?) {
+                task.command = calls
+                    .iter()
+                    .enumerate()
+                    .map(|(i, call)| {
+                        if i == 0 {
+                            format!(
+                                "@task {}",
+                                normalize_task_name(call).unwrap_or_else(|| call.clone())
+                            )
+                        } else {
+                            format!(
+                                "@and\n    @task {}",
+                                normalize_task_name(call).unwrap_or_else(|| call.clone())
+                            )
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n  ");
+                task.description = Some("runs the other tasks".to_string());
+                task.help = Some(
+                    "Generated from an npm script that only chains other package scripts."
+                        .to_string(),
+                );
+            }
+            Some(task)
+        })
         .collect();
     Ok(Some(ImportGroup {
         source: "package.json".to_string(),
@@ -188,7 +235,11 @@ fn json_tasks(path: &Path, key: &str, command: &str) -> CjResult<Option<ImportGr
     let root = read_json_object(path)?;
     let tasks = json_entries(path, &root, key)?
         .into_iter()
-        .filter_map(|name| imported_task(&name, command))
+        .filter_map(|name| {
+            let mut task = imported_task(&name, command)?;
+            task.provenance = format!("{key}.{name}");
+            Some(task)
+        })
         .collect();
     Ok(Some(ImportGroup {
         source: path
@@ -329,6 +380,9 @@ fn imported_task(source_name: &str, command: &str) -> Option<ImportedTask> {
     Some(ImportedTask {
         base_name,
         command: format!("{command} {argument}"),
+        provenance: source_name.to_string(),
+        description: None,
+        help: None,
     })
 }
 
@@ -344,7 +398,36 @@ fn imported_npm_task(source_name: &str, command: &str) -> Option<ImportedTask> {
     Some(ImportedTask {
         base_name,
         command: format!("{command} {argument}"),
+        provenance: source_name.to_string(),
+        description: None,
+        help: None,
     })
+}
+
+fn npm_script_calls(command: &str, scripts: &Map<String, Value>) -> Option<Vec<String>> {
+    let calls = command.split("&&").map(str::trim).collect::<Vec<_>>();
+    if calls.len() < 2 {
+        return None;
+    }
+    let names = calls
+        .iter()
+        .map(|part| part.strip_prefix("npm run ").map(str::trim))
+        .collect::<Option<Vec<_>>>()?;
+    if names
+        .iter()
+        .any(|name| name.is_empty() || !scripts.contains_key(*name))
+    {
+        return None;
+    }
+    Some(names.into_iter().map(str::to_string).collect())
+}
+
+fn read_imported_sources(source: &str) -> HashSet<String> {
+    source
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix("@pragma from "))
+        .map(str::to_string)
+        .collect()
 }
 
 fn normalize_task_name(source: &str) -> Option<String> {

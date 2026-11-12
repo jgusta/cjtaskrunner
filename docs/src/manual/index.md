@@ -222,6 +222,22 @@ See [`@watch`](../reference/directives.md#watch).
 
 Use [`@if`](../reference/directives.md#if), [`@else`](../reference/directives.md#else), [`@and`](../reference/directives.md#and), and [`@or`](../reference/directives.md#or) for status-based flow.
 
+Chain successful steps with consecutive `@and` blocks. Each block runs only if
+the previous command or block succeeded:
+
+```cjtasks
+check:
+  @task typecheck
+  @and
+    @task test
+  @and
+    @task build
+```
+
+This is useful when a task should run several other tasks in order and stop at
+the first failure. See [`@and`](../reference/directives.md#and) for the full
+status chaining rules.
+
 ```cjtasks
 cond:
   @set MODE release

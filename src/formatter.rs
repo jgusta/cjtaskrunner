@@ -15,6 +15,12 @@ pub(crate) fn format_taskfile_source(source: &str) -> String {
         }
 
         let (indent, content) = split_indent(line);
+        if content.starts_with("@pragma from ") {
+            formatted.push_str(&" ".repeat(normalize_indent(indent)));
+            formatted.push_str(content);
+            formatted.push('\n');
+            continue;
+        }
         let content = normalize_task_header(content);
         if indent == 0 {
             formatted.push_str(&content);
